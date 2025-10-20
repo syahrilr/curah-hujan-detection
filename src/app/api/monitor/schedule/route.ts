@@ -1,6 +1,6 @@
 // app/api/monitor/schedule/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { checkRainfallAtPumps, saveRainfallAlerts, sendAlertNotifications } from '@/lib/rainfall-monitor'
+import { checkRainfallAtPumps, saveRainfallAlerts } from '@/lib/rainfall-monitor'
 
 /**
  * GET /api/monitor/schedule
@@ -38,8 +38,6 @@ export async function GET(request: NextRequest) {
     if (alertCount > 0) {
       savedCount = await saveRainfallAlerts(results)
 
-      // 4. Send notifications
-      await sendAlertNotifications(results)
     }
 
     // 5. Return summary
