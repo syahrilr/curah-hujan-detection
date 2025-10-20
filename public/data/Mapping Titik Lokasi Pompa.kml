@@ -1,0 +1,1000 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document id="1WPCOuaw_VZaSjeYCi9-iU9n3NVfx6QOf">
+	<name>Mapping Titik Lokasi Pompa (Terfilter)</name>
+	<gx:CascadingStyle kml:id="__managed_style_131393FA173B1C3911F4">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=66bb6a&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<gx:displayMode>card</gx:displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_14358278C63B1C3911D3">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/none_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=d32f2f&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_032F8BA5003B1C3911D3">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_14358278C63B1C3911D3</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_200F840AF33B1C3911D3</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_2451A3A19B3B1C3911F1">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=fbc02d&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<gx:displayMode>card</gx:displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_16B1EBB24B3B1C3911F1">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=fbc02d&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<gx:displayMode>card</gx:displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0B0B3B3A423B1C3911F1">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_16B1EBB24B3B1C3911F1</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_2451A3A19B3B1C3911F1</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_1B9820A9FA3B1C3911D0">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?id=2107&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_02B7D231733B1C3911F4">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_131393FA173B1C3911F4</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0B467868B73B1C3911F6</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="__managed_style_06F069DAA93B1C3911D0">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_1B9820A9FA3B1C3911D0</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_286EF6F49E3B1C3911D0</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_22059F1E8A3B1C3911CF">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_1E0705DA603B1C3911CF">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0E10D10D473B1C3911CF">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_1E0705DA603B1C3911CF</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_22059F1E8A3B1C3911CF</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_242A5632673B1C3911BE">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_1828B6B2733B1C3911CE">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=d32f2f&amp;id=2107&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0165F3DB2C3B1C3911CE">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=d32f2f&amp;id=2107&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0B467868B73B1C3911F6">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=66bb6a&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<gx:displayMode>card</gx:displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_1163AE49503B1C3911C6">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=66bb6a&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_26F7C065173B1C3911C3">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=d32f2f&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_19476094CE3B1C3911BE">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_00AE8E1A8F3B1C3911C3">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_1689C342593B1C3911C3</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_26F7C065173B1C3911C3</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="__managed_style_500D52A0143B1C3911CC">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_0165F3DB2C3B1C3911CE</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_1828B6B2733B1C3911CE</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_286EF6F49E3B1C3911D0">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?id=2107&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_2F212ED2873B1C3911C6">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=66bb6a&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0646C384723B1C3911C6">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_1163AE49503B1C3911C6</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_2F212ED2873B1C3911C6</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_1689C342593B1C3911C3">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=d32f2f&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_200F840AF33B1C3911D3">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/none_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=d32f2f&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0D2658683E3B1C3911BE">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_19476094CE3B1C3911BE</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_242A5632673B1C3911BE</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Folder id="0AD3F6000D329DB61C39">
+		<name>SDA 2024</name>
+		<styleUrl>#__managed_style_0D2658683E3B1C3911BE</styleUrl>
+		<Placemark id="0412DF319038319C338C">
+			<name>RP Bukit Duri 1</name>
+			<LookAt>
+				<longitude>106.8651506313306</longitude>
+				<latitude>-6.223885596601226</latitude>
+				<altitude>11.7224990124679</altitude>
+				<heading>2.649752707124838</heading>
+				<tilt>0.2906341617478038</tilt>
+				<gx:fovy>35</gx:fovy>
+				<range>448.3127619715378</range>
+				<altitudeMode>absolute</altitudeMode>
+			</LookAt>
+			<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+			<Point>
+				<coordinates>106.8651980347636,-6.223906449801994,11.08111406205859</coordinates>
+			</Point>
+		</Placemark>
+	</Folder>
+	<Folder id="019E4C502232A7F62FBA">
+		<name>47 Pluit</name>
+		<styleUrl>#__managed_style_0D2658683E3B1C3911BE</styleUrl>
+		<Placemark id="0E3F9546F332A7F6EB86">
+			<name>Waduk Pluit</name>
+			<LookAt>
+				<longitude>106.7970035522631</longitude>
+				<latitude>-6.10933704505373</latitude>
+				<altitude>-0.5167872046189237</altitude>
+				<heading>0</heading>
+				<tilt>0</tilt>
+				<gx:fovy>30</gx:fovy>
+				<range>598.3732550040442</range>
+				<altitudeMode>absolute</altitudeMode>
+			</LookAt>
+			<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+			<Point>
+				<coordinates>106.7967176335852,-6.109587893238242,-0.517280166225134</coordinates>
+			</Point>
+		</Placemark>
+	</Folder>
+	<Placemark id="01B8BB14FD33735C1A3B">
+		<name>Cideng</name>
+		<LookAt>
+			<longitude>106.8079969155742</longitude>
+			<latitude>-6.173876508868579</latitude>
+			<altitude>2.876913298907717</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1522.388258017745</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8063777136397,-6.173347983888852,1.641688983825751</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="03BFC55B363831533821">
+		<name>RP Dewa Ruci</name>
+		<LookAt>
+			<longitude>106.9217933039148</longitude>
+			<latitude>-6.108250811495469</latitude>
+			<altitude>2.002126397641719</altitude>
+			<heading>-1.610900179883299</heading>
+			<tilt>1.907786576230411</tilt>
+			<gx:fovy>30.00014846627167</gx:fovy>
+			<range>153.7830240880794</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.9218814431276,-6.108332940862889,1.981362714698864</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0921D2602E38315748A7">
+		<name>RP Pinang</name>
+		<LookAt>
+			<longitude>106.9039865572135</longitude>
+			<latitude>-6.112354182700659</latitude>
+			<altitude>2.289188317640189</altitude>
+			<heading>-1.610900229169179</heading>
+			<tilt>1.909485779252199</tilt>
+			<gx:fovy>30.00014113005171</gx:fovy>
+			<range>100.0830063746253</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.9037317017107,-6.112265246347072,2.634586073839369</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="074F6A6C9138315C501E">
+		<name>RP Sunter Selatan</name>
+		<LookAt>
+			<longitude>106.8622853804092</longitude>
+			<latitude>-6.149765378409339</latitude>
+			<altitude>1.473555807748383</altitude>
+			<heading>-1.610899949474171</heading>
+			<tilt>1.909578547138932</tilt>
+			<gx:fovy>30.00014113005171</gx:fovy>
+			<range>409.6797830962896</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8611801473172,-6.149889431815075,1.572817007623502</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="05485F76C13831665FC6">
+		<name>RP Taman BMW</name>
+		<LookAt>
+			<longitude>106.854637881107</longitude>
+			<latitude>-6.126736859309272</latitude>
+			<altitude>0.8187925741185786</altitude>
+			<heading>359.9996061463498</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>109.3521339665858</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8545055514351,-6.12684107764029,0.598282556021601</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0B4EAF383F3831694328">
+		<name>RP Rawa Malang</name>
+		<LookAt>
+			<longitude>106.9398916952008</longitude>
+			<latitude>-6.127299030609184</latitude>
+			<altitude>0.6796169777297978</altitude>
+			<heading>359.9996007284145</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>602.251794480908</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.9401438821179,-6.127779021766349,0.3555851542482436</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="015289802538316E9886">
+		<name>RP Kali Item</name>
+		<LookAt>
+			<longitude>106.8595705430664</longitude>
+			<latitude>-6.155137624726495</latitude>
+			<altitude>2.172039656921088</altitude>
+			<heading>359.9995839944302</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>179.1584045407399</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.859460379957,-6.155156766341556,2.446873868266306</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0FB4C7940138317013AF">
+		<name>RP Pulomas 1</name>
+		<LookAt>
+			<longitude>106.8813608703475</longitude>
+			<latitude>-6.166917778884351</latitude>
+			<altitude>2.385604141824764</altitude>
+			<heading>359.9995721250305</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>192.5467362125164</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8814243287584,-6.16690057171208,1.962916674276169</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="047A7CF93E3831722AA7">
+		<name>RP Waduk Bojong Indah</name>
+		<LookAt>
+			<longitude>106.7374699630255</longitude>
+			<latitude>-6.160032535000337</latitude>
+			<altitude>3.592415673877509</altitude>
+			<heading>359.9995637836094</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>194.4303681236852</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.7375715921876,-6.160163771805825,2.651096445199908</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="06CF5F92353831771B70">
+		<name>RP Wijaya Kusuma</name>
+		<LookAt>
+			<longitude>106.7700587375729</longitude>
+			<latitude>-6.154408120548658</latitude>
+			<altitude>1.072996182739727</altitude>
+			<heading>352.4056751189043</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>142.7514486632026</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.7698480551546,-6.154598942080172,0.867229135124179</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0E9852673138317BA4F4">
+		<name>RP Tanjung Duren 2</name>
+		<LookAt>
+			<longitude>106.7898244719258</longitude>
+			<latitude>-6.173351219437597</latitude>
+			<altitude>1.961865648516725</altitude>
+			<heading>2.649752000998725</heading>
+			<tilt>0.2906214798826928</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>168.9775165451647</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.7895207853486,-6.173337274490633,2.580022094858299</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0D35A2449A3831973DB3">
+		<name>Waduk Lebak Bulus</name>
+		<LookAt>
+			<longitude>106.7891654378359</longitude>
+			<latitude>-6.299820224641663</latitude>
+			<altitude>34.86583055046452</altitude>
+			<heading>2.649752014009643</heading>
+			<tilt>0.2906178621914461</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>90.52388645387511</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.7890031953335,-6.299807747878253,33.20256234879675</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0E9B41F77338319DAB20">
+		<name>RP Bukit Duri 2</name>
+		<LookAt>
+			<longitude>106.8638741559017</longitude>
+			<latitude>-6.220931691140558</latitude>
+			<altitude>14.0081592196368</altitude>
+			<heading>2.649752725786294</heading>
+			<tilt>0.2906295907207808</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>348.391743838838</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8630637540948,-6.22056015192837,11.65191501038345</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="065BF5A95D38319E9E79">
+		<name>RP Bukit Duri 8</name>
+		<LookAt>
+			<longitude>106.8612379238712</longitude>
+			<latitude>-6.217119652926342</latitude>
+			<altitude>9.901156874114834</altitude>
+			<heading>0.8105189504761119</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>384.2111475726051</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8599389220821,-6.217461155155786,11.10375270867153</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="027A0D60CA38319F89E0">
+		<name>RP Bukit Duri 6</name>
+		<LookAt>
+			<longitude>106.8618489546345</longitude>
+			<latitude>-6.218077113515409</latitude>
+			<altitude>9.732383073095592</altitude>
+			<heading>358.2933416081785</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>264.9365094881068</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8616926642308,-6.218122490841282,11.143477758741</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0DB20FB5F33831A0C363">
+		<name>RP Bukit Duri 3</name>
+		<LookAt>
+			<longitude>106.8617834785025</longitude>
+			<latitude>-6.220499383962601</latitude>
+			<altitude>11.37828385423176</altitude>
+			<heading>358.2933305264954</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>141.9854985371603</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8618388038947,-6.22047494746874,11.38695537164301</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="06BF0C8DA63831A5C42B">
+		<name>RP Bukit Duri 4</name>
+		<LookAt>
+			<longitude>106.8595075095574</longitude>
+			<latitude>-6.220118755655429</latitude>
+			<altitude>16.62737190332641</altitude>
+			<heading>1.772815403388639</heading>
+			<tilt>0.1425770618972527</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>56.84713009852203</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8592419078934,-6.22008247348054,16.54162967628431</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0E79F701423831A737A8">
+		<name>RP Bukti Duri 7</name>
+		<LookAt>
+			<longitude>106.8626727777577</longitude>
+			<latitude>-6.216429274868528</latitude>
+			<altitude>11.29578326287238</altitude>
+			<heading>1.772815411536557</heading>
+			<tilt>0.1425780546253549</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>101.7566028803958</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8625409402699,-6.216552443127356,10.15188780243288</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0695B638C03831A8A8C1">
+		<name>RP Bukit Duri 9</name>
+		<LookAt>
+			<longitude>106.858629784196</longitude>
+			<latitude>-6.217278110639232</latitude>
+			<altitude>11.38857524874318</altitude>
+			<heading>1.772815408455659</heading>
+			<tilt>0.1425779582751623</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>98.33416379253322</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8583430909437,-6.217256964631904,11.09886681300883</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="01DA5C1D603831AC4D24">
+		<name>RP Setiabudi Timur</name>
+		<LookAt>
+			<longitude>106.8305456441278</longitude>
+			<latitude>-6.205035242416868</latitude>
+			<altitude>6.747852694666811</altitude>
+			<heading>1.772815388021281</heading>
+			<tilt>0.1425821425569056</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>286.1597736698604</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8295595953325,-6.204649199770714,6.843612636926535</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="03F2545A243831B4B45B">
+		<name>RP Kemang Raya</name>
+		<LookAt>
+			<longitude>106.8158445428374</longitude>
+			<latitude>-6.263627688160766</latitude>
+			<altitude>26.2005378383169</altitude>
+			<heading>356.9796870917717</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>74.93692191243099</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8158738366411,-6.26360474259669,26.21050886306413</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="05E69602763831B9FEE0">
+		<name>RP Gaya Motor 2</name>
+		<LookAt>
+			<longitude>106.8840228660659</longitude>
+			<latitude>-6.140028340397556</latitude>
+			<altitude>1.358650752510862</altitude>
+			<heading>356.9796464804066</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>227.3674751338695</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8838831478398,-6.139962530245941,1.196018326388189</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0D06BCF3263831BE6FD1">
+		<name>RP Sunter C</name>
+		<LookAt>
+			<longitude>106.8575752292753</longitude>
+			<latitude>-6.140057575624378</latitude>
+			<altitude>-0.200604941853062</altitude>
+			<heading>-6.796381922350272</heading>
+			<tilt>0.1815897375759638</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>207.2731686393309</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8570686046035,-6.140144820593734,0.6265309851998935</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0ABB203FB53831C0A854">
+		<name>RP KBN</name>
+		<LookAt>
+			<longitude>106.9250312624776</longitude>
+			<latitude>-6.145992579742341</latitude>
+			<altitude>2.692663851293886</altitude>
+			<heading>-6.802451799692688</heading>
+			<tilt>0.1815883085446565</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>157.6390233495659</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.9245249685864,-6.146025344636846,3.130319780034674</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0454C360EB3831C67240">
+		<name>RP Greenville</name>
+		<LookAt>
+			<longitude>106.7696038336831</longitude>
+			<latitude>-6.163646764671998</latitude>
+			<altitude>0.6417086559144325</altitude>
+			<heading>-6.79200003323844</heading>
+			<tilt>0.1815868449958188</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>106.7971513011616</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.769305854051,-6.163600625668501,1.189167039900487</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="06054161F0392CE6680B">
+		<name>Bendung Katulampa</name>
+		<LookAt>
+			<longitude>106.8373245643517</longitude>
+			<latitude>-6.633121164813847</latitude>
+			<altitude>341.6137422834077</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>599.4904152931849</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8369770666501,-6.633214648637848,336.2256636428125</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="06F0CE43BB392C9EB09">
+		<name>Pintu Air Tangki</name>
+		<gx:fid>0x2e69f757843dc08b:0xf6fcba2918de6e56</gx:fid>
+		<styleUrl>#__managed_style_032F8BA5003B1C3911D3</styleUrl>
+		<Point>
+			<coordinates>106.8172137920673,-6.14691949698571,-0.01676010207160905</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="061AB452CA392CFF9651">
+		<name>RP Bukit Duri 5</name>
+		<LookAt>
+			<longitude>106.8601958451995</longitude>
+			<latitude>-6.220906523667322</latitude>
+			<altitude>9.37961681514917</altitude>
+			<heading>357.7111763779825</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>215.6605624076474</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AE8E1A8F3B1C3911C3</styleUrl>
+		<Point>
+			<coordinates>106.8599390717508,-6.221097465021177,12.59276081707198</coordinates>
+		</Point>
+	</Placemark>
+</Document>
+</kml>
