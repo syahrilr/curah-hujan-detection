@@ -10,9 +10,11 @@ import {
   Activity,
   History,
   Menu,
-  X
+  X,
+  ChartBarBigIcon
 } from 'lucide-react'
 import { useState } from 'react'
+import { icon } from 'leaflet'
 
 export default function Navigation() {
   const pathname = usePathname()
@@ -22,6 +24,7 @@ export default function Navigation() {
     { href: '/', label: 'Home', icon: Home },
     { href: '/radar', label: 'Radar Map', icon: Map },
     { href: '/monitoring', label: 'Monitoring', icon: Activity },
+    { label: "Comparison", href: "/comparison", icon: ChartBarBigIcon },
     { href: '/history', label: 'History', icon: History },
   ]
 

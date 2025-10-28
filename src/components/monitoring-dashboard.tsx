@@ -34,7 +34,27 @@ import {
   Activity,
   AlertCircle,
   Loader2,
+  ImageIcon,
+  X,
+  BarChart,
+  Monitor,
+  Radar,
+  Settings, // Icon baru ditambahkan
 } from "lucide-react";
+// Impor komponen tab baru
+import RainfallHistoryTab from "./history/rainfall-historycal-tab";
+
+interface DetectedLocation {
+  lat: number;
+  lng: number;
+  name: string;
+  dbz: number;
+  rainRate: number;
+  intensity: string;
+  confidence: string;
+  pixelX: number;
+  pixelY: number;
+}
 
 interface MonitorResult {
   name: string;
@@ -56,6 +76,17 @@ interface MonitorSummary {
   threshold: number;
   duration: string;
   timestamp: string;
+  detectedLocations?: number;
+  recordId?: string;
+}
+
+interface CapturedData {
+  radarImage?: string;
+  radarImageUrl?: string;
+  screenshot?: string;
+  detectedLocations?: DetectedLocation[];
+  timestamp?: string;
+  radarStation?: string;
 }
 
 interface CronStatus {
@@ -67,10 +98,12 @@ export default function MonitoringDashboard() {
   const [isChecking, setIsChecking] = useState(false);
   const [summary, setSummary] = useState<MonitorSummary | null>(null);
   const [results, setResults] = useState<MonitorResult[]>([]);
+  const [capturedData, setCapturedData] = useState<CapturedData | null>(null);
   const [threshold, setThreshold] = useState(2.0);
   const [cronInterval, setCronInterval] = useState("*/10 * * * *");
   const [cronStatus, setCronStatus] = useState<CronStatus | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [selectedImageModal, setSelectedImageModal] = useState(false);
 
   useEffect(() => {
     checkCronStatus();
@@ -113,13 +146,20 @@ export default function MonitoringDashboard() {
     setIsChecking(true);
     try {
       const response = await fetch(
-        `/api/monitor/check?threshold=${threshold}&save=${saveToDb}&notify=false`
+        `/api/monitor/check-with-capture?threshold=${threshold}&save=${saveToDb}&notify=false`
       );
       const data = await response.json();
 
       if (data.success) {
         setSummary(data.summary);
         setResults(data.results);
+
+        // ✅ NEW: Include screenshot in captured data
+        setCapturedData({
+          ...data.capturedData,
+          screenshot: data.capturedData?.screenshot, // From API response
+        });
+
         setLastUpdate(new Date());
       }
     } catch (error) {
@@ -153,7 +193,8 @@ export default function MonitoringDashboard() {
               Rainfall Monitoring
             </h1>
             <p className="text-muted-foreground mt-2">
-              Automatic monitoring at pump station locations
+              Automatic monitoring at pump station locations with radar image
+              capture
             </p>
           </div>
           {cronStatus && (
@@ -168,15 +209,31 @@ export default function MonitoringDashboard() {
         </div>
 
         <Tabs defaultValue="monitor" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
-            <TabsTrigger value="monitor">Monitor</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+          {/* PERBARUI: Tambah 1 kolom (grid-cols-4) untuk tab baru */}
+          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+            <TabsTrigger value="monitor">
+              <Monitor className="size-4 mr-2"/>
+              Monitor
+            </TabsTrigger>
+            <TabsTrigger value="radar">
+              <Radar className="size-4 mr-2"/>
+              Radar Image
+            </TabsTrigger>
+            {/* TAMBAH: Tab History Baru */}
+            <TabsTrigger value="history">
+              <BarChart className="h-4 w-4 mr-2" />
+              History
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="size-4 mr-2"/>
+              Settings
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="monitor" className="space-y-6">
             {/* Summary Cards */}
             {summary && (
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-5">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
@@ -208,7 +265,21 @@ export default function MonitoringDashboard() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                      Alerts Saved
+                      Detected Locations
+                    </CardTitle>
+                    <ImageIcon className="h-4 w-4 text-blue-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {summary.detectedLocations || 0}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Saved Records
                     </CardTitle>
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                   </CardHeader>
@@ -238,7 +309,8 @@ export default function MonitoringDashboard() {
               <CardHeader>
                 <CardTitle>Manual Check</CardTitle>
                 <CardDescription>
-                  Trigger an immediate rainfall check at all locations
+                  Trigger an immediate rainfall check at all locations with
+                  radar image capture
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -371,6 +443,344 @@ export default function MonitoringDashboard() {
             )}
           </TabsContent>
 
+          <TabsContent value="radar" className="space-y-6">
+            {capturedData && capturedData.radarImage ? (
+              <div className="space-y-6">
+                {/* Screenshot with Annotations */}
+                {capturedData.screenshot && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <ImageIcon className="h-5 w-5" />
+                        Annotated Screenshot
+                      </CardTitle>
+                      <CardDescription>
+                        Radar image with detected rainfall locations marked and
+                        labeled
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="relative bg-slate-900 rounded-lg overflow-hidden border-2 border-blue-500">
+                        <img
+                          src={capturedData.screenshot}
+                          alt="Annotated Radar Screenshot"
+                          className="w-full h-auto"
+                        />
+                        <div className="absolute top-4 right-4 bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold">
+                          📍 {capturedData.detectedLocations?.length || 0}{" "}
+                          Locations
+                        </div>
+                      </div>
+
+                      {/* Screenshot Info */}
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
+                          <div className="text-muted-foreground text-xs mb-1">
+                            Radar Station
+                          </div>
+                          <div className="font-bold text-blue-600">
+                            {capturedData.radarStation || "JAK"}
+                          </div>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg">
+                          <div className="text-muted-foreground text-xs mb-1">
+                            Locations Detected
+                          </div>
+                          <div className="font-bold text-green-600">
+                            {capturedData.detectedLocations?.length || 0}
+                          </div>
+                        </div>
+                        <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg">
+                          <div className="text-muted-foreground text-xs mb-1">
+                            Timestamp
+                          </div>
+                          <div className="font-bold text-purple-600 text-xs">
+                            {capturedData.timestamp
+                              ? new Date(capturedData.timestamp).toLocaleString(
+                                  "id-ID"
+                                )
+                              : "-"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setSelectedImageModal(true)}
+                          className="flex-1 gap-2"
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                          View Full Size
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            // Download screenshot
+                            const link = document.createElement("a");
+                            link.href = capturedData.screenshot!;
+                            link.download = `radar-screenshot-${Date.now()}.png`;
+                            link.click();
+                          }}
+                          className="gap-2"
+                        >
+                          💾 Download
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Original Radar Image */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      🛰️ Original Radar Image
+                    </CardTitle>
+                    <CardDescription>
+                      Raw radar data from BMKG without annotations
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="relative bg-muted rounded-lg overflow-hidden">
+                      <img
+                        src={capturedData.radarImage}
+                        alt="Original Radar Image"
+                        className="w-full h-auto"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Image URL</div>
+                        <div className="font-mono text-xs truncate">
+                          {capturedData.radarImageUrl || "-"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Image Size</div>
+                        <div className="font-semibold">
+                          {(
+                            (capturedData.radarImage?.length || 0) / 1024
+                          ).toFixed(2)}{" "}
+                          KB
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Detected Locations List */}
+                {capturedData.detectedLocations &&
+                  capturedData.detectedLocations.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>
+                          Detected Locations (
+                          {capturedData.detectedLocations.length})
+                        </CardTitle>
+                        <CardDescription>
+                          Rainfall data extracted from radar image
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {capturedData.detectedLocations
+                            .sort((a, b) => b.rainRate - a.rainRate) // Sort by rain rate
+                            .map((location, index) => (
+                              <div
+                                key={index}
+                                className={`flex items-start justify-between p-4 border-2 rounded-lg transition-all hover:shadow-md ${
+                                  location.rainRate >= 10
+                                    ? "border-red-500 bg-red-50 dark:bg-red-950"
+                                    : location.rainRate >= 2
+                                    ? "border-orange-500 bg-orange-50 dark:bg-orange-950"
+                                    : "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <div
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                                        location.rainRate >= 10
+                                          ? "bg-red-600"
+                                          : location.rainRate >= 2
+                                          ? "bg-orange-600"
+                                          : "bg-blue-600"
+                                      }`}
+                                    >
+                                      {index + 1}
+                                    </div>
+                                    <div>
+                                      <div className="font-bold text-lg">
+                                        {location.name}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground font-mono">
+                                        {location.lat.toFixed(5)}°,{" "}
+                                        {location.lng.toFixed(5)}°
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-3 text-sm mt-3">
+                                    <div>
+                                      <div className="text-muted-foreground text-xs">
+                                        Rain Rate
+                                      </div>
+                                      <div className="font-bold text-base flex items-center gap-1">
+                                        <Droplets className="h-3 w-3" />
+                                        {location.rainRate.toFixed(2)} mm/h
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground text-xs">
+                                        dBZ
+                                      </div>
+                                      <div className="font-bold text-base">
+                                        {location.dbz.toFixed(1)}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground text-xs">
+                                        Pixel
+                                      </div>
+                                      <div className="font-mono text-xs">
+                                        ({location.pixelX}, {location.pixelY})
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-xs text-muted-foreground mt-2 italic">
+                                    {location.confidence}
+                                  </div>
+                                </div>
+
+                                <div className="text-right">
+                                  <Badge
+                                    variant={getIntensityVariant(
+                                      location.intensity
+                                    )}
+                                    className="mb-2"
+                                  >
+                                    {location.intensity}
+                                  </Badge>
+                                  {location.rainRate >= 10 && (
+                                    <div className="mt-2">
+                                      <Badge
+                                        variant="destructive"
+                                        className="gap-1"
+                                      >
+                                        <AlertTriangle className="h-3 w-3" />
+                                        HIGH RISK
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                {/* Statistics Card */}
+                {capturedData.detectedLocations &&
+                  capturedData.detectedLocations.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>📊 Detection Statistics</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="bg-red-50 dark:bg-red-950 p-4 rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              High Risk
+                            </div>
+                            <div className="text-2xl font-bold text-red-600">
+                              {
+                                capturedData.detectedLocations.filter(
+                                  (l) => l.rainRate >= 10
+                                ).length
+                              }
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              ≥10 mm/h
+                            </div>
+                          </div>
+
+                          <div className="bg-orange-50 dark:bg-orange-950 p-4 rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              Medium Risk
+                            </div>
+                            <div className="text-2xl font-bold text-orange-600">
+                              {
+                                capturedData.detectedLocations.filter(
+                                  (l) => l.rainRate >= 2 && l.rainRate < 10
+                                ).length
+                              }
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              2-10 mm/h
+                            </div>
+                          </div>
+
+                          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              Low Risk
+                            </div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {
+                                capturedData.detectedLocations.filter(
+                                  (l) => l.rainRate < 2
+                                ).length
+                              }
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              &lt;2 mm/h
+                            </div>
+                          </div>
+
+                          <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              Max Rain Rate
+                            </div>
+                            <div className="text-2xl font-bold text-purple-600">
+                              {Math.max(
+                                ...capturedData.detectedLocations.map(
+                                  (l) => l.rainRate
+                                )
+                              ).toFixed(1)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              mm/h
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+              </div>
+            ) : (
+              <Card className="p-12">
+                <div className="text-center space-y-4">
+                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      No radar image captured yet
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Run a check to capture the latest radar image
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* TAMBAH: Konten untuk Tab History Baru */}
+          <TabsContent value="history" className="space-y-6">
+            <RainfallHistoryTab />
+          </TabsContent>
+
           <TabsContent value="settings" className="space-y-6">
             {/* Cron Settings */}
             <Card>
@@ -480,17 +890,25 @@ export default function MonitoringDashboard() {
                       Data dibaca secara real-time dari citra radar BMKG
                     </span>
                   </li>
-                  {/* <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-600" />
+                    <span>
+                      Radar image ditangkap dan disimpan ke database sebagai
+                      base64
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-600" />
+                    <span>
+                      Semua lokasi yang terdeteksi dengan curah hujan disimpan
+                      dengan koordinat dan metadata lengkap
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-600" />
                     <span>
                       Peringatan (alert) akan muncul jika curah hujan melebihi
                       ambang batas
-                    </span>
-                  </li> */}
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-600" />
-                    <span>
-                      Semua hasil pemeriksaan otomatis disimpan ke dalam database
                     </span>
                   </li>
                 </ul>
@@ -499,6 +917,32 @@ export default function MonitoringDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Full Size Image Modal */}
+      {selectedImageModal && capturedData?.radarImage && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 flex items-center justify-between p-4 border-b bg-background">
+              <h2 className="text-lg font-semibold">Radar Image - Full Size</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedImageModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-4">
+              <img
+                src={capturedData.radarImage || "/placeholder.svg"}
+                alt="Radar Image Full Size"
+                className="w-full h-auto"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
