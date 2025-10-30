@@ -1,8 +1,3 @@
-/**
- * Radar Image Capture and Storage Utilities
- * FIXED VERSION - Improved timestamp validation
- */
-
 import https from "https"
 
 export interface CapturedRadarData {
@@ -99,7 +94,7 @@ export async function captureRadarImage(
  */
 export async function createRadarScreenshot(
   radarImageBase64: string,
-  detectedLocations: DetectedLocation[],
+  detectedLocations: DetectedLocation[], // Ini sekarang akan menerima daftar yang sudah difilter (hanya yg > 0)
   imageWidth: number,
   imageHeight: number,
 ): Promise<string> {
@@ -340,10 +335,6 @@ function getMarkerColor(rainRate: number): string {
   return "#ef4444" // Red - Very heavy rain
 }
 
-/**
- * Validate captured radar data before saving
- * ✅ FIXED: Improved timestamp validation
- */
 export function validateRadarData(data: CapturedRadarData): {
   valid: boolean
   errors: string[]
@@ -364,16 +355,15 @@ export function validateRadarData(data: CapturedRadarData): {
     errors.push("Image URL is empty")
   }
 
-  // ✅ FIXED: Improved timestamp validation - accept ISO format
   if (!data.timestamp) {
     errors.push("Timestamp is missing")
   } else {
     try {
-      const date = new Date(data.timestamp)
+      const date = new Date(data.timestamp);
+
       if (isNaN(date.getTime())) {
         errors.push(`Invalid timestamp format: ${data.timestamp}`)
       }
-      // Additional check: timestamp should be recent (within 24 hours)
       const now = new Date()
       const diff = Math.abs(now.getTime() - date.getTime())
       const hoursDiff = diff / (1000 * 60 * 60)
@@ -406,6 +396,7 @@ export function validateRadarData(data: CapturedRadarData): {
   if (!Array.isArray(data.detectedLocations)) {
     errors.push("Detected locations must be an array")
   } else {
+    // Validasi ini sekarang akan memeriksa semua 48 lokasi
     data.detectedLocations.forEach((loc, index) => {
       if (isNaN(loc.lat) || isNaN(loc.lng)) {
         errors.push(`Location ${index}: Invalid coordinates`)
@@ -453,16 +444,13 @@ export function validateDocumentSize(capturedData: CapturedRadarData): {
   }
 }
 
-/**
- * Format captured data for database storage
- */
 export function formatForDatabase(capturedData: CapturedRadarData, additionalMetadata?: Record<string, any>) {
   return {
     radarStation: capturedData.radarStation,
     radarImage: capturedData.imageBase64,
     radarImageUrl: capturedData.imageUrl,
-    timestamp: new Date(capturedData.timestamp), // Convert ISO string to Date
-    radarTime: capturedData.timestamp, // Keep ISO string for reference
+    timestamp: new Date(capturedData.timestamp),
+    radarTime: capturedData.timestamp,
     bounds: {
       sw: {
         lat: capturedData.bounds.sw[0],
@@ -494,3 +482,4 @@ export function formatForDatabase(capturedData: CapturedRadarData, additionalMet
     updatedAt: new Date(),
   }
 }
+

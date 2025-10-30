@@ -1,8 +1,3 @@
-/**
- * Updated route.ts for /api/monitor/check-with-capture
- * Include screenshot in API response
- */
-
 import { type NextRequest, NextResponse } from "next/server"
 import { checkRainfallAtPumpsWithCapture, saveRainfallWithImage } from "@/lib/rainfall-monitor"
 
@@ -20,6 +15,7 @@ export async function GET(request: NextRequest) {
     console.log(`   Save all records: ${saveAll}`)
 
     const startTime = Date.now()
+    // 'checkRainfallAtPumpsWithCapture' sekarang akan mengembalikan 'detectedLocations' berisi 48 lokasi
     const { results, capturedData } = await checkRainfallAtPumpsWithCapture(threshold)
     const duration = Date.now() - startTime
 
@@ -33,10 +29,9 @@ export async function GET(request: NextRequest) {
     let screenshotGenerated = false
 
     if (shouldSave && capturedData) {
-      const saveResult = await saveRainfallWithImage(results, capturedData, saveAll)
+      const saveResult = await saveRainfallWithImage(results, capturedData, saveAll, threshold)
       savedCount = saveResult.savedCount
       recordId = saveResult.recordId
-      // Only assign screenshotGenerated if the property exists on the returned object
       if ('screenshotGenerated' in saveResult) {
         screenshotGenerated = Boolean((saveResult as any).screenshotGenerated)
       } else {
@@ -117,7 +112,7 @@ export async function GET(request: NextRequest) {
             radarStation: capturedData.radarStation,
             radarImage: capturedData.imageBase64,
             radarImageUrl: capturedData.imageUrl,
-            screenshot: screenshot, // ✅ Include screenshot in response
+            screenshot: screenshot,
             detectedLocations: capturedData.detectedLocations,
             imageSize: capturedData.imageBase64.length,
             bounds: capturedData.bounds,
@@ -138,3 +133,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+

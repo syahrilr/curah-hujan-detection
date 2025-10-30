@@ -9,7 +9,7 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 
 // Ambil URI dari env var - jika tidak ada, MongoDB akan di-skip
 const MONGODB_URI = process.env.MONGODB_URI;
-const DB_NAME = "db_curah_hujan";
+const DB_NAME = "db-oas-dg";
 const COLLECTION_NAME = "rainfall_history";
 const MONGODB_ENABLED = !!MONGODB_URI;
 

@@ -1,8 +1,3 @@
-/**
- * Enhanced Rainfall Monitor - IMPROVED
- * Better error handling, image processing, and data validation
- */
-
 import { getPumpLocations, type PumpLocation } from "./kml-parser"
 import { createRadarScreenshot } from "./radar-image-capture"
 import { MongoClient } from "mongodb"
@@ -44,8 +39,6 @@ interface RainfallResult {
   pixelY?: number
 }
 
-/**
- */
 function dBZtoRainRate(dbz: number): number {
   if (dbz < 5) return 0
   const Z = Math.pow(10, dbz / 10)
@@ -61,9 +54,6 @@ function getRainIntensity(mmPerHour: number): string {
   return "Very Heavy Rain"
 }
 
-/**
- * Improved coordinate conversion with better bounds validation
- */
 function latLngToImageXY(
   lat: number,
   lng: number,
@@ -94,9 +84,6 @@ function latLngToImageXY(
   return { x, y }
 }
 
-/**
- * Improved color matching with better threshold handling
- */
 function getDBZFromColor(pixelColor: [number, number, number, number], legends: any): number {
   const [r, g, b, a] = pixelColor
 
@@ -135,9 +122,6 @@ function getDBZFromColor(pixelColor: [number, number, number, number], legends: 
   return legends.levels[matchedIndex] || 0
 }
 
-/**
- * Improved pixel radius calculation with better bounds handling
- */
 function getPixelRadius(
   lat: number,
   radiusKm: number,
@@ -176,8 +160,7 @@ function getPixelRadius(
   return Math.round(Math.max(MIN_PIXEL_RADIUS, Math.min(MAX_PIXEL_RADIUS, avgPixelRadius)))
 }
 
-/**
- */
+
 async function fetchRadarData(): Promise<RadarData> {
   return new Promise((resolve, reject) => {
     const httpsAgent = new https.Agent({
@@ -232,9 +215,6 @@ async function fetchRadarData(): Promise<RadarData> {
   })
 }
 
-/**
- * Improved image reading with better error handling and validation
- */
 async function readRainfallFromImage(
   imageUrl: string,
   lat: number,
@@ -347,8 +327,6 @@ async function readRainfallFromImage(
   }
 }
 
-/**
- */
 export async function checkRainfallAtPumpsWithCapture(rainfallThreshold = 2.0): Promise<{
   results: RainfallResult[]
   capturedData: CapturedRadarData | null
@@ -434,19 +412,17 @@ export async function checkRainfallAtPumpsWithCapture(rainfallThreshold = 2.0): 
 
         results.push(result)
 
-        if (rainfall.rainRate > 0) {
-          detectedLocations.push({
-            lat: location.lat,
-            lng: location.lng,
-            name: location.name,
-            dbz: rainfall.dbz,
-            rainRate: rainfall.rainRate,
-            intensity: rainfall.intensity,
-            confidence: rainfall.confidence,
-            pixelX: rainfall.pixelX || 0,
-            pixelY: rainfall.pixelY || 0,
-          })
-        }
+        detectedLocations.push({
+          lat: location.lat,
+          lng: location.lng,
+          name: location.name,
+          dbz: rainfall.dbz,
+          rainRate: rainfall.rainRate,
+          intensity: rainfall.intensity,
+          confidence: rainfall.confidence,
+          pixelX: rainfall.pixelX || 0,
+          pixelY: rainfall.pixelY || 0,
+        })
 
         if (shouldAlert) {
           console.log(`⚠️ ALERT: ${location.name} - ${rainfall.intensity} (${rainfall.rainRate.toFixed(2)} mm/h)`)
@@ -468,10 +444,12 @@ export async function checkRainfallAtPumpsWithCapture(rainfallThreshold = 2.0): 
       }
     }
 
+    const parsableTimestamp = radarData.Latest.timeLocal.replace(/ \w+$/, "");
+
     const capturedData: CapturedRadarData = {
       imageBase64,
       imageUrl: latestImageUrl,
-      timestamp: radarData.Latest.timeLocal,
+      timestamp: parsableTimestamp,
       radarStation: "JAK",
       bounds: {
         sw: [bounds[0][0], bounds[0][1]],
@@ -492,19 +470,18 @@ export async function checkRainfallAtPumpsWithCapture(rainfallThreshold = 2.0): 
   }
 }
 
-/**
- * Save rainfall data with image and detected locations to database
- * NOW WITH SCREENSHOT GENERATION
- */
+
 export async function saveRainfallWithImage(
   results: RainfallResult[],
   capturedData: CapturedRadarData | null,
   saveAll = false,
+  rainfallThreshold: number,
 ): Promise<{ savedCount: number; recordId: string | null }> {
+
   const recordsToSave = saveAll ? results : results.filter((r) => r.shouldAlert)
 
-  if (recordsToSave.length === 0 && !capturedData) {
-    console.log("ℹ️ No records to save")
+  if (!capturedData) {
+    console.log("ℹ️ No captured data, nothing to save")
     return { savedCount: 0, recordId: null }
   }
 
@@ -520,20 +497,22 @@ export async function saveRainfallWithImage(
       }
     }
 
-    // ✅ NEW: Generate annotated screenshot
-    let annotatedScreenshot = ""
-    if (capturedData && capturedData.detectedLocations.length > 0) {
-      try {
-        console.log("📸 Generating annotated screenshot...")
 
-        // Get image dimensions from base64 data
-        // Most BMKG radar images are 1024x1024 or similar
+    const locationsForScreenshot = capturedData
+      ? capturedData.detectedLocations.filter(loc => loc.rainRate > 0)
+      : [];
+
+    let annotatedScreenshot = ""
+    if (capturedData && locationsForScreenshot.length > 0) {
+      try {
+        console.log(`📸 Generating annotated screenshot for ${locationsForScreenshot.length} locations (out of ${capturedData.detectedLocations.length} total)...`)
+
         const imageWidth = 1024
         const imageHeight = 1024
 
         annotatedScreenshot = await createRadarScreenshot(
           capturedData.imageBase64,
-          capturedData.detectedLocations,
+          locationsForScreenshot,
           imageWidth,
           imageHeight
         )
@@ -542,8 +521,10 @@ export async function saveRainfallWithImage(
         console.log(`✅ Screenshot generated (${screenshotSize} KB)`)
       } catch (error) {
         console.warn("⚠️ Failed to generate screenshot:", error)
-        // Continue without screenshot - not critical
+
       }
+    } else if (capturedData) {
+      console.log("ℹ️ No rainfall detected, skipping screenshot generation.")
     }
 
     client = await MongoClient.connect(MONGODB_URI, {
@@ -565,9 +546,9 @@ export async function saveRainfallWithImage(
           }
         : null,
       radarStation: capturedData?.radarStation || "JAK",
-      radarImage: capturedData?.imageBase64 || "", // Original radar image
+      radarImage: capturedData?.imageBase64 || "",
       radarImageUrl: capturedData?.imageUrl || "",
-      screenshot: annotatedScreenshot, // ✅ NEW: Annotated screenshot with markers
+      screenshot: annotatedScreenshot,
       markers:
         capturedData?.detectedLocations.map((loc) => ({
           lat: loc.lat,
@@ -581,18 +562,19 @@ export async function saveRainfallWithImage(
         })) || [],
       detectedLocations: capturedData?.detectedLocations || [],
       bounds: capturedData?.bounds || null,
-      notes: `Auto-detected: ${capturedData?.detectedLocations.length || 0} locations with rainfall`,
+      notes: `Auto-detected: ${capturedData?.detectedLocations.length || 0} locations processed.`,
       metadata: {
         radarTime: capturedData?.timestamp,
         bounds: capturedData?.bounds,
         zoom: null,
         totalDetected: capturedData?.detectedLocations.length || 0,
+        locationsWithRain: locationsForScreenshot.length,
         maxRainRate: Math.max(0, ...(capturedData?.detectedLocations.map((l) => l.rainRate) || [0])),
-        alertCount: capturedData?.detectedLocations.filter((l) => l.rainRate >= 2.0).length || 0,
-        hasScreenshot: annotatedScreenshot.length > 0, // ✅ NEW: Track if screenshot exists
+        alertCount: capturedData?.detectedLocations.filter((l) => l.rainRate >= rainfallThreshold).length || 0,
+        hasScreenshot: annotatedScreenshot.length > 0,
       },
       isAutoDetected: true,
-      isAlert: recordsToSave.some((r) => r.shouldAlert),
+      isAlert: capturedData.detectedLocations.some(l => l.rainRate >= rainfallThreshold),
       createdAt: new Date(),
       updatedAt: new Date(),
     }
