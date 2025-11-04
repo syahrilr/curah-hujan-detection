@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -8,7 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -16,39 +22,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PumpLocation } from "@/lib/kml-parser";
 import {
-  HistoricalData,
-  HistoricalHourly,
+  HistoricalData
 } from "@/lib/open-meteo-archive";
 import { format } from "date-fns";
-import { id } from "date-fns/locale";
 import {
-  Calendar as CalendarIcon,
-  Loader2,
-  BarChart,
   AlertCircle,
+  BarChart,
+  Calendar as CalendarIcon,
   Download,
+  Loader2,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-  ResponsiveContainer,
-  LineChart,
+  Brush,
   CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
   Legend,
   Line,
-  Brush,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
-import { cn } from "@/lib/utils";
+import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
 // Tipe data untuk chart
@@ -59,19 +57,43 @@ type ChartData = {
   windSpeed: number | null;
 };
 
+function formatDate(date: Date | undefined) {
+  if (!date) {
+    return ""
+  }
+
+  return date.toLocaleDateString("en-US", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })
+}
+
+function isValidDate(date: Date | undefined) {
+  if (!date) {
+    return false
+  }
+  return !isNaN(date.getTime())
+}
+
 // Tipe lokasi dengan ID
 type PumpLocationWithId = PumpLocation & { id: string };
 
 export default function RainfallHistoryTab() {
-  const [locations, setLocations] = useState<PumpLocationWithId[]>([]);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    null
-  );
-  const [startDate, setStartDate] = useState<Date>(new Date("2024-01-01"));
-  const [endDate, setEndDate] = useState<Date>(new Date("2025-10-23"));
-  const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [locations, setLocations] = useState<PumpLocationWithId[]>([])
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date("2024-01-01"))
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date("2025-10-23"))
+  const [chartData, setChartData] = useState<ChartData[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const [startDateOpen, setStartDateOpen] = useState(false)
+  const [endDateOpen, setEndDateOpen] = useState(false)
+  const [startDateValue, setStartDateValue] = useState(formatDate(startDate))
+  const [endDateValue, setEndDateValue] = useState(formatDate(endDate))
+  const [startMonth, setStartMonth] = useState<Date | undefined>(startDate)
+  const [endMonth, setEndMonth] = useState<Date | undefined>(endDate)
 
   // 1. Ambil daftar lokasi saat komponen dimuat
   useEffect(() => {
@@ -98,23 +120,23 @@ export default function RainfallHistoryTab() {
   // 2. Fungsi untuk mengambil data history
   const handleFetchHistory = async () => {
     if (!selectedLocationId) {
-      setError("Silakan pilih lokasi terlebih dahulu.");
-      return;
+      setError("Silakan pilih lokasi terlebih dahulu.")
+      return
     }
     if (!startDate || !endDate) {
-      setError("Silakan pilih tanggal mulai dan selesai.");
-      return;
+      setError("Silakan pilih tanggal mulai dan selesai.")
+      return
     }
 
-    const location = locations.find((loc) => loc.id === selectedLocationId);
+    const location = locations.find((loc) => loc.id === selectedLocationId)
     if (!location) {
-      setError("Lokasi tidak ditemukan.");
-      return;
+      setError("Lokasi tidak ditemukan.")
+      return
     }
 
-    setIsLoading(true);
-    setError(null);
-    setChartData([]);
+    setIsLoading(true)
+    setError(null)
+    setChartData([])
 
     try {
       const params = new URLSearchParams({
@@ -123,59 +145,48 @@ export default function RainfallHistoryTab() {
         lng: location.lng.toString(),
         startDate: format(startDate, "yyyy-MM-dd"),
         endDate: format(endDate, "yyyy-MM-dd"),
-        locationName: location.name, // Kirim nama lokasi
-      });
+        locationName: location.name,
+      })
 
-      const response = await fetch(`/api/history?${params.toString()}`);
-      const result = await response.json();
+      const response = await fetch(`/api/history?${params.toString()}`)
+      const result = await response.json()
 
       if (!result.success) {
-        throw new Error(result.message || "Gagal mengambil data history.");
+        throw new Error(result.message || "Gagal mengambil data history.")
       }
 
-      // 3. Format data untuk chart - PERBAIKAN: Include tahun
-      const data: HistoricalData = result.data;
-      const formattedData: ChartData[] = data.hourly.time.map((t, i) => ({
+      const data: HistoricalData = result.data
+      const formattedData: ChartData[] = data.hourly.time.map((t: string, i: number) => ({
         time: format(new Date(t), "dd-MMM-yy HH:mm"),
         precipitation: data.hourly.precipitation[i],
         rain: data.hourly.rain[i],
         windSpeed: data.hourly.wind_speed_10m[i],
-      }));
+      }))
 
-      console.log('Total data points:', formattedData.length);
-      console.log('First data point:', formattedData[0]);
-      console.log('Last data point:', formattedData[formattedData.length - 1]);
-
-      setChartData(formattedData);
+      setChartData(formattedData)
     } catch (err) {
-      setError((err as Error).message);
-      console.error(err);
+      setError((err as Error).message)
+      console.error(err)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
-  // 4. Fungsi untuk download CSV
   const handleDownloadCSV = () => {
-    if (chartData.length === 0) return;
+    if (chartData.length === 0) return
 
-    const location = locations.find((loc) => loc.id === selectedLocationId);
-    const headers = "time,precipitation (mm),rain (mm),windSpeed (km/h)";
-    const rows = chartData.map(
-      (d) =>
-        `${d.time},${d.precipitation || 0},${d.rain || 0},${d.windSpeed || 0}`
-    );
-    const csvContent = `data:text/csv;charset=utf-8,${headers}\n${rows.join(
-      "\n"
-    )}`;
+    const location = locations.find((loc) => loc.id === selectedLocationId)
+    const headers = "time,precipitation (mm),rain (mm),windSpeed (km/h)"
+    const rows = chartData.map((d) => `${d.time},${d.precipitation || 0},${d.rain || 0},${d.windSpeed || 0}`)
+    const csvContent = `data:text/csv;charset=utf-8,${headers}\n${rows.join("\n")}`
 
-    const link = document.createElement("a");
-    link.href = encodeURI(csvContent);
+    const link = document.createElement("a")
+    link.href = encodeURI(csvContent)
     link.download = `history_${
       location?.name.replace(/\s+/g, "_") || "data"
-    }_${format(startDate, "yyyyMMdd")}_${format(endDate, "yyyyMMdd")}.csv`;
-    link.click();
-  };
+    }_${startDate ? format(startDate, "yyyyMMdd") : "start"}_${endDate ? format(endDate, "yyyyMMdd") : "end"}.csv`
+    link.click()
+  }
 
   const selectedLocation = locations.find(
     (loc) => loc.id === selectedLocationId
@@ -228,66 +239,108 @@ export default function RainfallHistoryTab() {
               )}
             </div>
 
-            {/* Tanggal Mulai */}
             <div className="space-y-2">
-              <Label>Tanggal Mulai</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? (
-                      format(startDate, "dd MMMM yyyy", { locale: id })
-                    ) : (
-                      <span>Pilih tanggal</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={(date) => setStartDate(date || new Date())}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label htmlFor="start-date">Tanggal Mulai</Label>
+              <div className="relative flex gap-2">
+                <Input
+                  id="start-date"
+                  value={startDateValue}
+                  placeholder="Jan 01, 2024"
+                  className="bg-background pr-10"
+                  onChange={(e) => {
+                    const date = new Date(e.target.value)
+                    setStartDateValue(e.target.value)
+                    if (isValidDate(date)) {
+                      setStartDate(date)
+                      setStartMonth(date)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault()
+                      setStartDateOpen(true)
+                    }
+                  }}
+                />
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="start-date-picker"
+                      variant="ghost"
+                      className="absolute top-1/2 right-2 size-6 -translate-y-1/2"
+                    >
+                      <CalendarIcon className="size-3.5" />
+                      <span className="sr-only">Select start date</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="end" alignOffset={-8} sideOffset={10}>
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      captionLayout="dropdown"
+                      month={startMonth}
+                      onMonthChange={setStartMonth}
+                      onSelect={(date) => {
+                        setStartDate(date)
+                        setStartDateValue(formatDate(date))
+                        setStartDateOpen(false)
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
-            {/* Tanggal Selesai */}
             <div className="space-y-2">
-              <Label>Tanggal Selesai</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? (
-                      format(endDate, "dd MMMM yyyy", { locale: id })
-                    ) : (
-                      <span>Pilih tanggal</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={(date) => setEndDate(date || new Date())}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label htmlFor="end-date">Tanggal Selesai</Label>
+              <div className="relative flex gap-2">
+                <Input
+                  id="end-date"
+                  value={endDateValue}
+                  placeholder="Oct 23, 2025"
+                  className="bg-background pr-10"
+                  onChange={(e) => {
+                    const date = new Date(e.target.value)
+                    setEndDateValue(e.target.value)
+                    if (isValidDate(date)) {
+                      setEndDate(date)
+                      setEndMonth(date)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault()
+                      setEndDateOpen(true)
+                    }
+                  }}
+                />
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="end-date-picker"
+                      variant="ghost"
+                      className="absolute top-1/2 right-2 size-6 -translate-y-1/2"
+                    >
+                      <CalendarIcon className="size-3.5" />
+                      <span className="sr-only">Select end date</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="end" alignOffset={-8} sideOffset={10}>
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      captionLayout="dropdown"
+                      month={endMonth}
+                      onMonthChange={setEndMonth}
+                      onSelect={(date) => {
+                        setEndDate(date)
+                        setEndDateValue(formatDate(date))
+                        setEndDateOpen(false)
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
 
@@ -324,7 +377,7 @@ export default function RainfallHistoryTab() {
             <CardTitle>Grafik History - {selectedLocation?.name}</CardTitle>
             <CardDescription>
               Menampilkan {chartData.length.toLocaleString()} data points dari{" "}
-              {format(startDate, "dd MMM yyyy")} - {format(endDate, "dd MMM yyyy")}
+              {startDate && format(startDate, "dd MMM yyyy")} - {endDate && format(endDate, "dd MMM yyyy")}
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[400px]">

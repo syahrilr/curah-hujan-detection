@@ -1,8 +1,3 @@
-/**
- * Rainfall History Chart Component
- * Visualizes historical rainfall data using Recharts
- */
-
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface DailyData {

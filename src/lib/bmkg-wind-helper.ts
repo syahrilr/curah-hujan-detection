@@ -1,7 +1,3 @@
-/**
- * BMKG Wind Data Integration
- * Fetches wind direction and speed from BMKG API
- */
 
 export interface WindData {
   location: {
@@ -154,9 +150,7 @@ export function getWindArrowRotation(windDirectionDeg: number): number {
   return (windDirectionDeg + 180) % 360
 }
 
-/**
- * Get wind speed category and color
- */
+//Get wind speed category and color
 export function getWindSpeedCategory(speedMS: number): {
   category: string
   color: string
@@ -190,16 +184,12 @@ export function getWindSpeedCategory(speedMS: number): {
   }
 }
 
-/**
- * Convert m/s to km/h
- */
+//Convert m/s to km/h
 export function msToKmh(ms: number): number {
   return ms * 3.6
 }
 
-/**
- * Create wind arrow SVG icon
- */
+//Create wind arrow SVG icon
 export function createWindArrowIcon(
   rotation: number,
   color: string,
@@ -219,10 +209,7 @@ export function createWindArrowIcon(
   `
 }
 
-/**
- * Create wind barb (meteorological standard)
- * More accurate for aviation/meteorology
- */
+//Create wind barb (meteorological standard) More accurate for aviation/meteorology
 export function createWindBarb(
   speedKnots: number,
   rotation: number,
@@ -261,9 +248,7 @@ export function createWindBarb(
   `
 }
 
-/**
- * Format wind data for display
- */
+//Format wind data for display
 export function formatWindInfo(windData: WindData): string {
   const speedKmh = msToKmh(windData.wind.speed)
   const category = getWindSpeedCategory(windData.wind.speed)
@@ -296,9 +281,6 @@ export function formatWindInfo(windData: WindData): string {
   `
 }
 
-/**
- * Export all utilities
- */
 export default {
   fetchBMKGWindData,
   fetchJakartaWindData,

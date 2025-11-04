@@ -1,8 +1,3 @@
-/**
- * KML Parser for pump locations
- * Returns hardcoded pump station coordinates
- */
-
 export interface PumpLocation {
   name: string
   lat: number
@@ -10,17 +5,10 @@ export interface PumpLocation {
   description?: string
 }
 
-/**
- * Get pump locations from hardcoded list
- * Made this function async to match API route expectations
- */
 export async function getPumpLocations(): Promise<PumpLocation[]> {
   return getHardcodedPumpLocations()
 }
 
-/**
- * Get pump locations from hardcoded list (fallback)
- */
 export function getHardcodedPumpLocations(): PumpLocation[] {
   return [
     { name: "Rumah Pompa Pulomas 2", lat: -6.168055599999999, lng: 106.8808333, description: "Pump station Pulomas 2" },
@@ -78,7 +66,7 @@ export function getHardcodedPumpLocations(): PumpLocation[] {
     { name: "Rumah Pompa Bukit Duri 8", lat: -6.217461155155786, lng: 106.8599389220821 },
     { name: "Rumah Pompa Bukit Duri 6", lat: -6.218122490841282, lng: 106.8616926642308 },
     { name: "Rumah Pompa Bukit Duri 3", lat: -6.22047494746874, lng: 106.8618388038947 },
-    { name: "Rumah Pompa Bukit Duri 4", lat: -6.22008247348054, lng: 106.8592419078934 },
+    { name: "Rumah Pompa Bukit Duri 4", lat: -6.2218841, lng: 106.8608350 },
     { name: "Rumah Pompa Bukit Duri 7", lat: -6.216552443127356, lng: 106.8625409402699 },
     { name: "Rumah Pompa Bukit Duri 9", lat: -6.217256964631904, lng: 106.8583430909437 },
     { name: "Rumah Pompa Setiabudi Timur", lat: -6.204649199770714, lng: 106.8295595953325 },

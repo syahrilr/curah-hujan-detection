@@ -1,20 +1,20 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
+  Activity,
+  ChartBarBigIcon,
+  History,
   Home,
   Map,
-  Activity,
-  History,
   Menu,
-  X,
-  ChartBarBigIcon
+  TrendingUpDown,
+  X
 } from 'lucide-react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { icon } from 'leaflet'
 
 export default function Navigation() {
   const pathname = usePathname()
@@ -26,6 +26,7 @@ export default function Navigation() {
     { href: '/monitoring', label: 'Monitoring', icon: Activity },
     { label: "Comparison", href: "/comparison", icon: ChartBarBigIcon },
     { href: '/history', label: 'History', icon: History },
+    { href: '/prediction', label: 'Prediction', icon: TrendingUpDown },
   ]
 
   return (

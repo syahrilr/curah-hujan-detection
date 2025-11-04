@@ -24,9 +24,6 @@ export interface DetectedLocation {
   pixelY: number
 }
 
-/**
- * Fetch radar image from BMKG and convert to base64
- */
 export async function captureRadarImage(
   imageUrl: string,
   radarStation = "JAK",
@@ -88,10 +85,7 @@ export async function captureRadarImage(
   })
 }
 
-/**
- * Create a screenshot/annotation of detected locations on radar image
- * Returns canvas as base64 PNG
- */
+
 export async function createRadarScreenshot(
   radarImageBase64: string,
   detectedLocations: DetectedLocation[], // Ini sekarang akan menerima daftar yang sudah difilter (hanya yg > 0)
@@ -324,9 +318,7 @@ export async function createRadarScreenshot(
   }
 }
 
-/**
- * Get marker color based on rain rate
- */
+
 function getMarkerColor(rainRate: number): string {
   if (rainRate < 0.5) return "#94a3b8" // Gray - No rain
   if (rainRate < 2) return "#10b981" // Green - Light rain

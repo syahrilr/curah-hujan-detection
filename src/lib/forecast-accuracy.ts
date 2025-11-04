@@ -1,8 +1,3 @@
-/**
- * Forecast Accuracy Analysis System
- * Membandingkan prediksi forecast dengan data aktual dari Open-Meteo Archive
- */
-
 import { MongoClient, ServerApiVersion } from "mongodb";
 
 // MongoDB Configuration
@@ -23,9 +18,7 @@ if (MONGODB_URI) {
   });
 }
 
-/* ====================================
-   📊 Types & Interfaces
-==================================== */
+//Types & Interfaces
 
 export interface ForecastRecord {
   location: {
@@ -63,19 +56,17 @@ export interface AccuracyMetrics {
   verifiedForecasts: number;
   metrics: {
     // Precipitation accuracy
-    mae: number; // Mean Absolute Error
-    rmse: number; // Root Mean Square Error
-    bias: number; // Average bias (over/under prediction)
-    correlation: number; // Correlation coefficient
+    mae: number;
+    rmse: number;
+    bias: number;
+    correlation: number;
+    probabilityScore: number;
 
-    // Probability accuracy
-    probabilityScore: number; // Brier Score
 
-    // Classification accuracy (rain vs no rain)
-    accuracy: number; // Correct predictions / total
-    precision: number; // True positives / (true positives + false positives)
-    recall: number; // True positives / (true positives + false negatives)
-    f1Score: number; // Harmonic mean of precision and recall
+    accuracy: number;
+    precision: number;
+    recall: number;
+    f1Score: number;
 
     // Threshold-based metrics
     rainyDaysCorrect: number;
@@ -91,16 +82,14 @@ export interface AccuracyMetrics {
   };
 }
 
-/* ====================================
-   💾 Save Forecast Record
-==================================== */
+//Save Forecast Record
 
 export async function saveForecastRecord(
   locationName: string,
   latitude: number,
   longitude: number,
   forecastData: {
-    targetTime: string; // ISO timestamp
+    targetTime: string;
     precipitation: number;
     probability: number;
     weatherCode: number;
@@ -143,9 +132,7 @@ export async function saveForecastRecord(
   }
 }
 
-/* ====================================
-   🔍 Verify Forecasts with Actual Data
-==================================== */
+//Verify Forecasts with Actual Data
 
 export async function verifyForecasts(
   startDate: Date,
@@ -214,9 +201,7 @@ export async function verifyForecasts(
   }
 }
 
-/* ====================================
-   📈 Calculate Accuracy Metrics
-==================================== */
+//Calculate Accuracy Metrics
 
 export async function calculateAccuracyMetrics(
   locationName: string,
@@ -317,9 +302,7 @@ export async function calculateAccuracyMetrics(
   }
 }
 
-/* ====================================
-   🔢 Statistical Functions
-==================================== */
+//Statistical Functions
 
 function calculateMAE(predictions: number[], actuals: number[]): number {
   const errors = predictions.map((p, i) => Math.abs(p - actuals[i]));
@@ -424,9 +407,7 @@ function getReliabilityRating(mae: number, correlation: number): string {
   return "Poor";
 }
 
-/* ====================================
-   🌐 Fetch Actual Data from Open-Meteo
-==================================== */
+//Fetch Actual Data from Open-Meteo
 
 async function fetchActualData(
   latitude: number,
@@ -469,9 +450,7 @@ async function fetchActualData(
   }
 }
 
-/* ====================================
-   💾 Save Accuracy Metrics to DB
-==================================== */
+//Save Accuracy Metrics to DB
 
 async function saveAccuracyMetrics(metrics: AccuracyMetrics): Promise<void> {
   if (!client) return;
@@ -492,9 +471,7 @@ async function saveAccuracyMetrics(metrics: AccuracyMetrics): Promise<void> {
   }
 }
 
-/* ====================================
-   📊 Get Historical Accuracy
-==================================== */
+//Get Historical Accuracy
 
 export async function getHistoricalAccuracy(
   locationName?: string,

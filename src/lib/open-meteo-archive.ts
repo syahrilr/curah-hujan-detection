@@ -1,8 +1,3 @@
-/**
- * Open-Meteo Archive API Helper
- * Mengambil data history curah hujan
- */
-
 export interface HistoricalHourly {
   time: string[];
   precipitation: (number | null)[];

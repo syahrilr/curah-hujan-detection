@@ -1,8 +1,3 @@
-/**
- * Open-Meteo Historical Data Integration
- * Fetches rainfall history for pump locations
- */
-
 import type { PumpLocation } from './kml-parser'
 
 export interface HistoricalDataPoint {
@@ -28,9 +23,7 @@ export interface HistoricalData {
   }
 }
 
-/**
- * Fetch historical rainfall data from Open-Meteo Archive API
- */
+//Fetch historical rainfall data from Open-Meteo Archive API
 export async function fetchHistoricalRainfall(
   location: PumpLocation,
   startDate: string,
@@ -98,9 +91,7 @@ export async function fetchHistoricalRainfall(
   }
 }
 
-/**
- * Fetch historical data for multiple locations
- */
+//Fetch historical data for multiple locations
 export async function fetchHistoricalRainfallBatch(
   locations: PumpLocation[],
   startDate: string,
@@ -130,9 +121,7 @@ export async function fetchHistoricalRainfallBatch(
   return results
 }
 
-/**
- * Aggregate daily data from hourly data
- */
+//Aggregate daily data from hourly data
 export function aggregateDailyData(hourlyData: HistoricalDataPoint[]): Array<{
   date: string
   totalPrecipitation: number
@@ -168,9 +157,7 @@ export function aggregateDailyData(hourlyData: HistoricalDataPoint[]): Array<{
   return dailyData.sort((a, b) => a.date.localeCompare(b.date))
 }
 
-/**
- * Compare historical data across multiple locations
- */
+//Compare historical data across multiple locations
 export function compareLocations(historicalDataList: HistoricalData[]): {
   location: string
   totalRainfall: number
@@ -187,9 +174,7 @@ export function compareLocations(historicalDataList: HistoricalData[]): {
     .sort((a, b) => b.totalRainfall - a.totalRainfall)
 }
 
-/**
- * Get date range presets
- */
+//Get date range presets
 export function getDatePresets(): Record<string, { start: string; end: string; label: string }> {
   const today = new Date()
   const formatDate = (date: Date) => date.toISOString().split('T')[0]
@@ -235,9 +220,7 @@ export function getDatePresets(): Record<string, { start: string; end: string; l
   return presets
 }
 
-/**
- * Format data for chart display
- */
+//Format data for chart display
 export function formatForChart(dailyData: Array<{
   date: string
   totalPrecipitation: number

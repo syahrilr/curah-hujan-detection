@@ -1,12 +1,8 @@
-// lib/init-cron.ts
 import { startCronJob } from './cron-service'
 
 let isInitialized = false
 
-/**
- * Initialize cron job automatically when server starts
- * Call this from a server component or API route
- */
+
 export function initializeCronJob() {
   // Prevent multiple initialization
   if (isInitialized) {
