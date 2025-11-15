@@ -1,5 +1,5 @@
-import RainfallHistory from '@/components/rainfall-history'
+import HistoryCronDashboard from '@/components/history/history-cron-dashboard'
 
 export default function HistoryPage() {
-  return <RainfallHistory />
+  return <HistoryCronDashboard />
 }

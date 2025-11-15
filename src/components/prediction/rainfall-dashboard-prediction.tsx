@@ -1,30 +1,33 @@
 'use client';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  AlertTriangle,
-  Download,
-  RefreshCw
-} from 'lucide-react';
 import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  RefreshCw,
+  Download,
+  CloudRain,
+  MapPin,
+  TrendingUp,
+  AlertTriangle
+} from 'lucide-react';
 
 // Import hooks dengan proper types
-import { usePredictionComparison } from '@/hooks/use-prediction-comparison';
 import { useRainfallPrediction } from '@/hooks/use-rainfall-prediction';
+import { usePredictionComparison } from '@/hooks/use-prediction-comparison';
 
 // Import utilities
 import {
-  downloadFile,
-  formatConfidence,
   formatRainRate,
+  formatConfidence,
   formatTimestamp,
+  getPredictionTime,
   getIntensityBadgeVariant,
-  getPredictionTime
+  downloadFile
 } from '@/lib/rainfall-utils';
 
 // Import API
@@ -34,16 +37,17 @@ import { rainfallAPI } from '@/lib/rainfall-api';
 import type { RainfallData } from '@/types/rainfall';
 
 // Import components
+import { RainfallMap } from './rainfall-map-prediction';
+import { RainfallChart } from './rainfall-chart-prediction';
+import { LocationTable } from './location-table-prediction';
+import { PredictionComparisonResults } from './prediction-comparison-results';
+import { SystemInfoCard } from './system-info-card';
 import { useRainfallImages } from '@/hooks/use-rainfall-images';
 import Image from 'next/image';
 import { useEffect } from 'react';
-import { LocationTable } from './location-table-prediction';
-import { PredictionComparisonResults } from './prediction-comparison-results';
-import { RainfallChart } from './rainfall-chart-prediction';
-import { RainfallMap } from './rainfall-map-prediction';
 
 export default function RainfallPredictionDashboard() {
-  const { data, loading, error, triggerPrediction } = useRainfallPrediction();
+  const { data, loading, error, progress, triggerPrediction } = useRainfallPrediction();
   const { images, reload: reloadImages } = useRainfallImages();
   const { compareWithActual, loading: compareLoading, data: comparisonData } = usePredictionComparison();
   const [selectedMinutes, setSelectedMinutes] = useState<number>(10);
@@ -95,8 +99,150 @@ export default function RainfallPredictionDashboard() {
       <div className="container mx-auto p-6">
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            <div className="font-semibold mb-2">Error: {error}</div>
+            <div className="text-sm">
+              Pastikan:
+              <ul className="list-disc list-inside mt-2">
+                <li>Backend API running di http://localhost:8000</li>
+                <li>MongoDB terhubung (192.168.5.192:27017)</li>
+                <li>Ada data di collection rainfall_records</li>
+              </ul>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outline"
+              >
+                Reload Page
+              </Button>
+              <Button
+                onClick={() => triggerPrediction()}
+                disabled={loading}
+              >
+                Try Again
+              </Button>
+            </div>
+          </AlertDescription>
         </Alert>
+      </div>
+    );
+  }
+
+  // Show loading state with progress
+  if (loading && progress) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Generating Prediction</CardTitle>
+            <CardDescription>
+              Using improved optical flow algorithm with MongoDB data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
+              <span className="text-lg">{progress}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-blue-500 h-2 rounded-full transition-all duration-500 animate-pulse"
+                style={{ width: '70%' }}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <div>• Fetching data from MongoDB</div>
+              <div>• Computing ensemble optical flow</div>
+              <div>• Generating multi-horizon predictions</div>
+              <div>• Creating visualizations</div>
+            </div>
+            <Alert>
+              <AlertDescription className="text-xs">
+                This process typically takes 2-10 minutes. Please wait...
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show empty state if no data yet
+  if (!data && !loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Rainfall Prediction System</CardTitle>
+            <CardDescription>
+              Advanced rainfall prediction using MongoDB and optical flow
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                <div className="font-semibold mb-2">Welcome! 👋</div>
+                <div className="text-sm mb-4">
+                  No prediction data available yet. Click the button below to generate your first prediction.
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex flex-col items-center gap-4 py-8">
+              <CloudRain className="h-16 w-16 text-muted-foreground" />
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">Ready to Start</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Generate rainfall predictions from the latest MongoDB data
+                </p>
+                <Button
+                  onClick={() => triggerPrediction()}
+                  disabled={loading}
+                  size="lg"
+                >
+                  <RefreshCw className="mr-2 h-5 w-5" />
+                  Generate First Prediction
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-semibold text-sm mb-3">System Requirements:</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
+                  <div>
+                    <div className="font-medium">Backend API</div>
+                    <div className="text-xs text-muted-foreground">Running on port 8000</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
+                  <div>
+                    <div className="font-medium">MongoDB</div>
+                    <div className="text-xs text-muted-foreground">Connected to rainfall_records</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
+                  <div>
+                    <div className="font-medium">Optical Flow</div>
+                    <div className="text-xs text-muted-foreground">DualTVL1 algorithm ready</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
+                  <div>
+                    <div className="font-medium">Multi-horizon</div>
+                    {/* PERBARUI TEKS DI SINI */}
+                    <div className="text-xs text-muted-foreground">10-min intervals up to 180 minutes</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -113,8 +259,16 @@ export default function RainfallPredictionDashboard() {
         <div>
           <h1 className="text-4xl font-bold">Rainfall Prediction System</h1>
           <p className="text-muted-foreground mt-2">
-            {data?.timestamp ? `Last updated: ${formatTimestamp(data.timestamp)}` : 'Loading...'}
+            {data?.timestamp ? `Last updated: ${formatTimestamp(data.timestamp)}` : 'No data yet - Click "Update Prediction"'}
           </p>
+          {data && (
+            <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
+              <span>📡 Source: MongoDB</span>
+              <span>🎬 Frames: {data.frames_used}</span>
+              {/* <span>⚙️ Method: {data.flow_method}</span> */}
+              <span>⏱️ Interval: {data.avg_frame_interval?.toFixed(1)}min</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button
@@ -124,11 +278,11 @@ export default function RainfallPredictionDashboard() {
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Updating...' : 'Update Prediction'}
           </Button>
-          <Button variant="outline" onClick={handleExportExcel}>
+          <Button variant="outline" onClick={handleExportExcel} disabled={!data}>
             <Download className="mr-2 h-4 w-4" />
             Export Excel
           </Button>
-          <Button variant="outline" onClick={handleExportJSON}>
+          <Button variant="outline" onClick={handleExportJSON} disabled={!data}>
             <Download className="mr-2 h-4 w-4" />
             Export JSON
           </Button>
@@ -183,6 +337,9 @@ export default function RainfallPredictionDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* System Info Card - Only show when data is available */}
+      {/* {data && <SystemInfoCard data={data} />} */}
 
       {/* Main Content */}
       <Tabs defaultValue="current" className="space-y-4">

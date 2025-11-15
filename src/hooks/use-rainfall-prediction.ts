@@ -1,86 +1,155 @@
-import { useState, useEffect, useCallback } from 'react';
+// hooks/use-rainfall-prediction.ts
+import { useState, useCallback, useEffect } from 'react';
 import { rainfallAPI } from '@/lib/rainfall-api';
-import { PredictionRequest, PredictionResult } from '@/types/rainfall';
+import type { PredictionResult } from '@/types/rainfall';
 
-export function useRainfallPrediction() {
+interface UseRainfallPredictionReturn {
+  data: PredictionResult | null;
+  loading: boolean;
+  error: string | null;
+  progress: string | null;
+  triggerPrediction: () => Promise<void>;
+  refetch: () => Promise<void>;
+}
+
+export function useRainfallPrediction(): UseRainfallPredictionReturn {
   const [data, setData] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
 
-  // Memuat hasil terbaru
-  const loadLatestResults = useCallback(async () => {
+  // Fetch latest results
+  const fetchLatestResults = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
       const results = await rainfallAPI.getLatestResults();
       setData(results);
-    } catch (err) {
-      // PERBAIKAN: Tangani error 404 (data belum ada) dengan baik
-      // Jika 404 (Not Found), jangan set error, biarkan data tetap null.
-      if (err instanceof Error && (err.message.includes('404') || err.message.includes('No prediction data'))) {
-        setData(null); // Pastikan data null
-        setError(null); // Hapus error sebelumnya
+      console.log('✅ Loaded existing prediction results');
+    } catch (err: any) {
+      // It's okay if no results exist yet (404)
+      if (err.message?.includes('No prediction data') || err.message?.includes('404')) {
+        console.log('ℹ️  No existing results, will need to trigger prediction');
+        setData(null);
+        setError(null); // Don't show error for missing data
       } else {
-        setError(err instanceof Error ? err.message : 'Failed to load results');
+        console.error('❌ Error loading results:', err);
+        setError(err.message);
       }
+    }
+  }, []);
+
+  // Load existing data on mount
+  useEffect(() => {
+    fetchLatestResults();
+  }, [fetchLatestResults]);
+
+  // Trigger new prediction with improved API
+  const triggerPrediction = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setProgress('Starting prediction...');
+
+    try {
+      // Step 1: Trigger prediction
+            console.log('🚀 Triggering prediction...');
+            const task = await rainfallAPI.triggerPrediction({
+              use_mongodb: true,
+              num_frames: 6,
+              save_visualizations: true
+            } as any);
+
+      console.log(`📋 Task started: ${task.task_id}`);
+      setProgress('Fetching data from MongoDB...');
+
+      // Step 2: Poll for status
+      let attempts = 0;
+      const maxAttempts = 300; // NAIKKAN: 10 menit max (300 * 2s)
+      const pollInterval = 2000; // 2 seconds
+
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        attempts++;
+
+        try {
+          const status = await rainfallAPI.getStatus(task.task_id);
+          console.log(`📊 Status check ${attempts}:`, status.status);
+
+          if (status.status === 'completed') {
+            setProgress('Loading results...');
+
+            // Step 3: Fetch results with retry
+            let retries = 3;
+            while (retries > 0) {
+              try {
+                const results = await rainfallAPI.getLatestResults();
+                setData(results);
+                console.log('✅ Prediction completed successfully');
+                setProgress(null);
+                setLoading(false);
+                return;
+              } catch (fetchErr) {
+                retries--;
+                if (retries === 0) throw fetchErr;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
+          }
+
+          if (status.status === 'error') {
+            throw new Error(status.message || 'Prediction failed');
+          }
+
+          // PERBARUI PESAN PROGRESS UNTUK 18 LANGKAH
+          if (attempts < 10) {
+            setProgress('Fetching data & decoding images...');
+          } else if (attempts < 25) {
+            setProgress('Computing optical flow (this takes a moment)...');
+          } else if (attempts < 35) {
+            setProgress('Analyzing current conditions...');
+          } else if (attempts < 90) {
+            // (25s - 3 menit)
+            const step = Math.ceil((attempts - 35) / (55 / 18)); // Perkiraan langkah
+            setProgress(`Generating prediction step ${step}/18...`);
+          } else if (attempts < 150) {
+            // (3 - 5 menit)
+            const step = Math.ceil((attempts - 90) / (60 / 18)) + 6; // Perkiraan langkah
+            setProgress(`Generating prediction step ${Math.min(step, 18)}/18...`);
+          } else if (attempts < 240) {
+            // (5 - 8 menit)
+            setProgress('Creating visualizations...');
+          } else {
+            // (8 - 10 menit)
+            setProgress('Finalizing results...');
+          }
+        } catch (statusErr: any) {
+          console.warn(`⚠️  Status check failed:`, statusErr.message);
+          // Continue polling even if status check fails
+        }
+      }
+
+      throw new Error('Prediction timeout - taking too long (>10 minutes). Please try again.');
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to generate prediction';
+      console.error('❌ Prediction error:', errorMessage);
+      setError(errorMessage);
+      setProgress(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Memicu prediksi baru
-  const triggerPrediction = useCallback(async (request?: PredictionRequest) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await rainfallAPI.triggerPrediction(request);
-      setTaskId(response.task_id);
-
-      // Polling status sampai selesai
-      const pollStatus = async () => {
-        const status = await rainfallAPI.getStatus(response.task_id);
-
-        if (status.status === 'completed') {
-          await loadLatestResults(); // Muat data baru setelah selesai
-          return true;
-        } else if (status.status === 'error') {
-          throw new Error(status.message);
-        }
-        return false;
-      };
-
-      // Poll setiap 2 detik
-      const maxAttempts = 60; // Maksimal 2 menit
-      for (let i = 0; i < maxAttempts; i++) {
-        const completed = await pollStatus();
-        if (completed) break;
-
-        // Penanganan timeout
-        if (i === maxAttempts - 1) {
-          throw new Error("Prediction task timed out. Please try again.");
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Prediction failed');
-    } finally {
-      setLoading(false);
-    }
-  }, [loadLatestResults]);
-
-  // Auto-load saat komponen dimuat
-  useEffect(() => {
-    loadLatestResults();
-  }, [loadLatestResults]);
+  // Refetch (reload existing data)
+  const refetch = useCallback(async () => {
+    await fetchLatestResults();
+  }, [fetchLatestResults]);
 
   return {
     data,
     loading,
     error,
-    taskId,
+    progress,
     triggerPrediction,
-    reload: loadLatestResults,
+    refetch
   };
 }

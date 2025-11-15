@@ -16,19 +16,35 @@ export class RainfallAPI {
     return response.json();
   }
 
-  // Get all locations
+  // Get all locations (from latest prediction data)
   async getLocations(): Promise<LocationInfo[]> {
-    const response = await fetch(`${this.baseUrl}/api/locations`);
-    if (!response.ok) throw new Error('Failed to fetch locations');
-    return response.json();
+    try {
+      const latest = await this.getLatestResults();
+      if (latest && latest.current) {
+        return latest.current.map((loc: any) => ({
+          name: loc.name,
+          lat: loc.lat,
+          lng: loc.lng
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.warn('No locations available yet');
+      return [];
+    }
   }
 
-  // Trigger prediction
+  // Trigger prediction with MongoDB
   async triggerPrediction(request?: PredictionRequest): Promise<PredictionTaskResponse> {
     const response = await fetch(`${this.baseUrl}/api/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request || {}),
+      body: JSON.stringify({
+        use_mongodb: true,
+        num_frames: 6,
+        save_visualizations: true,
+        ...request
+      }),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -50,6 +66,7 @@ export class RainfallAPI {
     if (!response.ok) throw new Error('No prediction data available');
     return response.json();
   }
+
 
   // Get current conditions only
   async getCurrentConditions() {
@@ -79,11 +96,18 @@ export class RainfallAPI {
     return response.json();
   }
 
-  // Export to Excel
+  // Export to Excel (Note: improved API doesn't have Excel export yet)
   async exportToExcel(): Promise<Blob> {
-    const response = await fetch(`${this.baseUrl}/api/export/excel`);
-    if (!response.ok) throw new Error('Failed to export Excel');
-    return response.blob();
+    try {
+      const response = await fetch(`${this.baseUrl}/api/export/excel`);
+      if (!response.ok) throw new Error('Excel export not available');
+      return response.blob();
+    } catch (error) {
+      console.warn('Excel export not available in improved API');
+      // Return JSON instead
+      const json = await this.exportToJSON();
+      return json;
+    }
   }
 
   // Export to JSON
@@ -94,12 +118,45 @@ export class RainfallAPI {
   }
 
   // Get image URL (for direct image display)
-  getImageUrl(type: 'current' | 'flow' | 'prediction', minutes?: number): string {
+  getImageUrl(type: 'current' | 'flow' | 'confidence' | 'prediction', minutes?: number): string {
     if (type === 'prediction' && minutes) {
       return `${this.baseUrl}/api/images/prediction/${minutes}`;
     }
     return `${this.baseUrl}/api/images/${type}`;
   }
+
+  // Poll prediction status until complete
+  async pollPredictionStatus(taskId: string, maxAttempts: number = 60, interval: number = 2000): Promise<any> {
+    for (let i = 0; i < maxAttempts; i++) {
+      const status = await this.getStatus(taskId);
+
+      if (status.status === 'completed') {
+        return status;
+      }
+
+      if (status.status === 'error') {
+        throw new Error(status.message || 'Prediction failed');
+      }
+
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+
+    throw new Error('Prediction timeout - took too long');
+  }
+
+  // Trigger and wait for prediction to complete
+  async triggerAndWaitPrediction(request?: PredictionRequest): Promise<PredictionResult> {
+    // Start prediction
+    const task = await this.triggerPrediction(request);
+
+    // Poll until complete
+    await this.pollPredictionStatus(task.task_id);
+
+    // Get results
+    return this.getLatestResults();
+  }
 }
 
+// Singleton instance
 export const rainfallAPI = new RainfallAPI();

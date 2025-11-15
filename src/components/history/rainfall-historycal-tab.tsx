@@ -22,17 +22,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { PumpLocation } from "@/lib/kml-parser";
-import {
-  HistoricalData
-} from "@/lib/open-meteo-archive";
-import { format } from "date-fns";
+import { HistoricalData } from "@/lib/open-meteo-archive";
+import { format, formatDistanceToNow } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import {
   AlertCircle,
   BarChart,
   Calendar as CalendarIcon,
   Download,
   Loader2,
+  Database,
+  Cloud,
+  RefreshCw,
+  Info,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -49,7 +53,6 @@ import {
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
-// Tipe data untuk chart
 type ChartData = {
   time: string;
   precipitation: number | null;
@@ -57,45 +60,65 @@ type ChartData = {
   windSpeed: number | null;
 };
 
-function formatDate(date: Date | undefined) {
-  if (!date) {
-    return ""
-  }
+type CacheInfo = {
+  documentsCount: number;
+  lastUpdate: string;
+  isFresh: boolean;
+};
 
+type DataResponse = {
+  success: boolean;
+  data: HistoricalData;
+  fromCache: boolean;
+  isFresh: boolean;
+  lastUpdate: string;
+  source: "mongodb" | "open-meteo";
+  mongodbSaved?: boolean;
+};
+
+function formatDate(date: Date | undefined) {
+  if (!date) return "";
   return date.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "long",
     year: "numeric",
-  })
+  });
 }
 
 function isValidDate(date: Date | undefined) {
-  if (!date) {
-    return false
-  }
-  return !isNaN(date.getTime())
+  if (!date) return false;
+  return !isNaN(date.getTime());
 }
 
-// Tipe lokasi dengan ID
 type PumpLocationWithId = PumpLocation & { id: string };
 
 export default function RainfallHistoryTab() {
-  const [locations, setLocations] = useState<PumpLocationWithId[]>([])
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date("2024-01-01"))
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date("2025-10-23"))
-  const [chartData, setChartData] = useState<ChartData[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [locations, setLocations] = useState<PumpLocationWithId[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    null
+  );
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    new Date("2024-01-01")
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<"mongodb" | "open-meteo" | null>(
+    null
+  );
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [cacheInfo, setCacheInfo] = useState<CacheInfo | null>(null);
+  const [checkingCache, setCheckingCache] = useState(false);
 
-  const [startDateOpen, setStartDateOpen] = useState(false)
-  const [endDateOpen, setEndDateOpen] = useState(false)
-  const [startDateValue, setStartDateValue] = useState(formatDate(startDate))
-  const [endDateValue, setEndDateValue] = useState(formatDate(endDate))
-  const [startMonth, setStartMonth] = useState<Date | undefined>(startDate)
-  const [endMonth, setEndMonth] = useState<Date | undefined>(endDate)
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+  const [startDateValue, setStartDateValue] = useState(formatDate(startDate));
+  const [endDateValue, setEndDateValue] = useState(formatDate(endDate));
+  const [startMonth, setStartMonth] = useState<Date | undefined>(startDate);
+  const [endMonth, setEndMonth] = useState<Date | undefined>(endDate);
 
-  // 1. Ambil daftar lokasi saat komponen dimuat
+  // Fetch locations on mount
   useEffect(() => {
     async function fetchLocations() {
       try {
@@ -117,26 +140,64 @@ export default function RainfallHistoryTab() {
     fetchLocations();
   }, []);
 
-  // 2. Fungsi untuk mengambil data history
-  const handleFetchHistory = async () => {
+  // Check cache info when location or dates change
+  useEffect(() => {
+    if (selectedLocationId && startDate && endDate) {
+      checkCacheInfo();
+    }
+  }, [selectedLocationId, startDate, endDate]);
+
+  // Check cache info
+  const checkCacheInfo = async () => {
+    const location = locations.find((loc) => loc.id === selectedLocationId);
+    if (!location || !startDate || !endDate) return;
+
+    setCheckingCache(true);
+    try {
+      const params = new URLSearchParams({
+        action: "getCacheInfo",
+        locationName: location.name,
+        startDate: format(startDate, "yyyy-MM-dd"),
+        endDate: format(endDate, "yyyy-MM-dd"),
+      });
+
+      const response = await fetch(`/api/history?${params.toString()}`);
+      const result = await response.json();
+
+      if (result.success && result.hasCacheInfo) {
+        setCacheInfo(result.cacheInfo);
+      } else {
+        setCacheInfo(null);
+      }
+    } catch (err) {
+      console.error("Error checking cache:", err);
+      setCacheInfo(null);
+    } finally {
+      setCheckingCache(false);
+    }
+  };
+
+  // Fetch history data
+  const handleFetchHistory = async (forceRefresh = false) => {
     if (!selectedLocationId) {
-      setError("Silakan pilih lokasi terlebih dahulu.")
-      return
+      setError("Silakan pilih lokasi terlebih dahulu.");
+      return;
     }
     if (!startDate || !endDate) {
-      setError("Silakan pilih tanggal mulai dan selesai.")
-      return
+      setError("Silakan pilih tanggal mulai dan selesai.");
+      return;
     }
 
-    const location = locations.find((loc) => loc.id === selectedLocationId)
+    const location = locations.find((loc) => loc.id === selectedLocationId);
     if (!location) {
-      setError("Lokasi tidak ditemukan.")
-      return
+      setError("Lokasi tidak ditemukan.");
+      return;
     }
 
-    setIsLoading(true)
-    setError(null)
-    setChartData([])
+    setIsLoading(true);
+    setError(null);
+    setChartData([]);
+    setDataSource(null);
 
     try {
       const params = new URLSearchParams({
@@ -146,47 +207,62 @@ export default function RainfallHistoryTab() {
         startDate: format(startDate, "yyyy-MM-dd"),
         endDate: format(endDate, "yyyy-MM-dd"),
         locationName: location.name,
-      })
+        forceRefresh: forceRefresh.toString(),
+      });
 
-      const response = await fetch(`/api/history?${params.toString()}`)
-      const result = await response.json()
+      const response = await fetch(`/api/history?${params.toString()}`);
+      const result: DataResponse = await response.json();
 
       if (!result.success) {
-        throw new Error(result.message || "Gagal mengambil data history.")
+        throw new Error( "Gagal mengambil data history.");
       }
 
-      const data: HistoricalData = result.data
-      const formattedData: ChartData[] = data.hourly.time.map((t: string, i: number) => ({
-        time: format(new Date(t), "dd-MMM-yy HH:mm"),
-        precipitation: data.hourly.precipitation[i],
-        rain: data.hourly.rain[i],
-        windSpeed: data.hourly.wind_speed_10m[i],
-      }))
+      const data: HistoricalData = result.data;
+      const formattedData: ChartData[] = data.hourly.time.map(
+        (t: string, i: number) => ({
+          time: format(new Date(t), "dd-MMM-yy HH:mm"),
+          precipitation: data.hourly.precipitation[i],
+          rain: data.hourly.rain[i],
+          windSpeed: data.hourly.wind_speed_10m[i],
+        })
+      );
 
-      setChartData(formattedData)
+      setChartData(formattedData);
+      setDataSource(result.source);
+      setLastUpdate(new Date(result.lastUpdate));
+
+      // Refresh cache info after fetching
+      await checkCacheInfo();
     } catch (err) {
-      setError((err as Error).message)
-      console.error(err)
+      setError((err as Error).message);
+      console.error(err);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleDownloadCSV = () => {
-    if (chartData.length === 0) return
+    if (chartData.length === 0) return;
 
-    const location = locations.find((loc) => loc.id === selectedLocationId)
-    const headers = "time,precipitation (mm),rain (mm),windSpeed (km/h)"
-    const rows = chartData.map((d) => `${d.time},${d.precipitation || 0},${d.rain || 0},${d.windSpeed || 0}`)
-    const csvContent = `data:text/csv;charset=utf-8,${headers}\n${rows.join("\n")}`
+    const location = locations.find((loc) => loc.id === selectedLocationId);
+    const headers = "time,precipitation (mm),rain (mm),windSpeed (km/h)";
+    const rows = chartData.map(
+      (d) =>
+        `${d.time},${d.precipitation || 0},${d.rain || 0},${d.windSpeed || 0}`
+    );
+    const csvContent = `data:text/csv;charset=utf-8,${headers}\n${rows.join(
+      "\n"
+    )}`;
 
-    const link = document.createElement("a")
-    link.href = encodeURI(csvContent)
+    const link = document.createElement("a");
+    link.href = encodeURI(csvContent);
     link.download = `history_${
       location?.name.replace(/\s+/g, "_") || "data"
-    }_${startDate ? format(startDate, "yyyyMMdd") : "start"}_${endDate ? format(endDate, "yyyyMMdd") : "end"}.csv`
-    link.click()
-  }
+    }_${startDate ? format(startDate, "yyyyMMdd") : "start"}_${
+      endDate ? format(endDate, "yyyyMMdd") : "end"
+    }.csv`;
+    link.click();
+  };
 
   const selectedLocation = locations.find(
     (loc) => loc.id === selectedLocationId
@@ -196,10 +272,15 @@ export default function RainfallHistoryTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>History Curah Hujan (Open-Meteo Archive)</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            History Curah Hujan
+            <Badge variant="outline" className="text-xs font-normal">
+              with Auto Cron Job
+            </Badge>
+          </CardTitle>
           <CardDescription>
-            Pilih lokasi pompa dan rentang tanggal untuk melihat history curah
-            hujan.
+            Data otomatis dikumpulkan setiap hari. Pilih lokasi dan rentang
+            tanggal untuk melihat history curah hujan.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -211,8 +292,41 @@ export default function RainfallHistoryTab() {
             </Alert>
           )}
 
+          {/* Cache Info Banner */}
+          {cacheInfo && !isLoading && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>Cache Tersedia</AlertTitle>
+              <AlertDescription className="text-sm">
+                {cacheInfo.isFresh ? (
+                  <>
+                    <Database className="inline h-3 w-3 mr-1" />
+                    Data tersimpan di cache ({cacheInfo.documentsCount} hari).
+                    Terakhir update:{" "}
+                    {formatDistanceToNow(new Date(cacheInfo.lastUpdate), {
+                      addSuffix: true,
+                      locale: idLocale,
+                    })}
+                    . Klik "Tampilkan History" untuk menggunakan cache atau "Refresh
+                    Data" untuk update terbaru.
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="inline h-3 w-3 mr-1" />
+                    Cache tersedia tapi sudah lama (
+                    {formatDistanceToNow(new Date(cacheInfo.lastUpdate), {
+                      addSuffix: true,
+                      locale: idLocale,
+                    })}
+                    ). Klik "Refresh Data" untuk update.
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Lokasi Pompa */}
+            {/* Location */}
             <div className="space-y-2 md:col-span-2">
               <Label>Lokasi Pompa</Label>
               <Select
@@ -239,6 +353,7 @@ export default function RainfallHistoryTab() {
               )}
             </div>
 
+            {/* Start Date */}
             <div className="space-y-2">
               <Label htmlFor="start-date">Tanggal Mulai</Label>
               <div className="relative flex gap-2">
@@ -248,17 +363,17 @@ export default function RainfallHistoryTab() {
                   placeholder="Jan 01, 2024"
                   className="bg-background pr-10"
                   onChange={(e) => {
-                    const date = new Date(e.target.value)
-                    setStartDateValue(e.target.value)
+                    const date = new Date(e.target.value);
+                    setStartDateValue(e.target.value);
                     if (isValidDate(date)) {
-                      setStartDate(date)
-                      setStartMonth(date)
+                      setStartDate(date);
+                      setStartMonth(date);
                     }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "ArrowDown") {
-                      e.preventDefault()
-                      setStartDateOpen(true)
+                      e.preventDefault();
+                      setStartDateOpen(true);
                     }
                   }}
                 />
@@ -273,7 +388,12 @@ export default function RainfallHistoryTab() {
                       <span className="sr-only">Select start date</span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto overflow-hidden p-0" align="end" alignOffset={-8} sideOffset={10}>
+                  <PopoverContent
+                    className="w-auto overflow-hidden p-0"
+                    align="end"
+                    alignOffset={-8}
+                    sideOffset={10}
+                  >
                     <Calendar
                       mode="single"
                       selected={startDate}
@@ -281,9 +401,9 @@ export default function RainfallHistoryTab() {
                       month={startMonth}
                       onMonthChange={setStartMonth}
                       onSelect={(date) => {
-                        setStartDate(date)
-                        setStartDateValue(formatDate(date))
-                        setStartDateOpen(false)
+                        setStartDate(date);
+                        setStartDateValue(formatDate(date));
+                        setStartDateOpen(false);
                       }}
                     />
                   </PopoverContent>
@@ -291,26 +411,27 @@ export default function RainfallHistoryTab() {
               </div>
             </div>
 
+            {/* End Date */}
             <div className="space-y-2">
               <Label htmlFor="end-date">Tanggal Selesai</Label>
               <div className="relative flex gap-2">
                 <Input
                   id="end-date"
                   value={endDateValue}
-                  placeholder="Oct 23, 2025"
+                  placeholder="Today"
                   className="bg-background pr-10"
                   onChange={(e) => {
-                    const date = new Date(e.target.value)
-                    setEndDateValue(e.target.value)
+                    const date = new Date(e.target.value);
+                    setEndDateValue(e.target.value);
                     if (isValidDate(date)) {
-                      setEndDate(date)
-                      setEndMonth(date)
+                      setEndDate(date);
+                      setEndMonth(date);
                     }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "ArrowDown") {
-                      e.preventDefault()
-                      setEndDateOpen(true)
+                      e.preventDefault();
+                      setEndDateOpen(true);
                     }
                   }}
                 />
@@ -325,7 +446,12 @@ export default function RainfallHistoryTab() {
                       <span className="sr-only">Select end date</span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto overflow-hidden p-0" align="end" alignOffset={-8} sideOffset={10}>
+                  <PopoverContent
+                    className="w-auto overflow-hidden p-0"
+                    align="end"
+                    alignOffset={-8}
+                    sideOffset={10}
+                  >
                     <Calendar
                       mode="single"
                       selected={endDate}
@@ -333,9 +459,9 @@ export default function RainfallHistoryTab() {
                       month={endMonth}
                       onMonthChange={setEndMonth}
                       onSelect={(date) => {
-                        setEndDate(date)
-                        setEndDateValue(formatDate(date))
-                        setEndDateOpen(false)
+                        setEndDate(date);
+                        setEndDateValue(formatDate(date));
+                        setEndDateOpen(false);
                       }}
                     />
                   </PopoverContent>
@@ -344,19 +470,43 @@ export default function RainfallHistoryTab() {
             </div>
           </div>
 
+          {/* Action Buttons */}
           <div className="flex flex-col md:flex-row gap-2">
             <Button
-              onClick={handleFetchHistory}
+              onClick={() => handleFetchHistory(false)}
               disabled={isLoading || !selectedLocationId}
               className="flex-1 gap-2"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
+              ) : cacheInfo ? (
+                <Database className="h-4 w-4" />
               ) : (
                 <BarChart className="h-4 w-4" />
               )}
-              {isLoading ? "Mengambil Data..." : "Tampilkan History"}
+              {isLoading
+                ? "Mengambil Data..."
+                : cacheInfo
+                ? "Tampilkan History (Cache)"
+                : "Tampilkan History"}
             </Button>
+
+            {cacheInfo && (
+              <Button
+                onClick={() => handleFetchHistory(true)}
+                disabled={isLoading || !selectedLocationId}
+                variant="outline"
+                className="gap-2"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Refresh Data
+              </Button>
+            )}
+
             <Button
               onClick={handleDownloadCSV}
               disabled={chartData.length === 0 || isLoading}
@@ -370,15 +520,52 @@ export default function RainfallHistoryTab() {
         </CardContent>
       </Card>
 
-      {/* Tampilan Chart */}
+      {/* Chart Display */}
       {chartData.length > 0 && !isLoading && (
         <Card>
           <CardHeader>
-            <CardTitle>Grafik History - {selectedLocation?.name}</CardTitle>
-            <CardDescription>
-              Menampilkan {chartData.length.toLocaleString()} data points dari{" "}
-              {startDate && format(startDate, "dd MMM yyyy")} - {endDate && format(endDate, "dd MMM yyyy")}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  Grafik History - {selectedLocation?.name}
+                  {dataSource && (
+                    <Badge
+                      variant={
+                        dataSource === "mongodb" ? "secondary" : "default"
+                      }
+                      className="text-xs font-normal"
+                    >
+                      {dataSource === "mongodb" ? (
+                        <>
+                          <Database className="h-3 w-3 mr-1" />
+                          Dari Cache
+                        </>
+                      ) : (
+                        <>
+                          <Cloud className="h-3 w-3 mr-1" />
+                          Fresh Data
+                        </>
+                      )}
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  Menampilkan {chartData.length.toLocaleString()} data points
+                  dari {startDate && format(startDate, "dd MMM yyyy")} -{" "}
+                  {endDate && format(endDate, "dd MMM yyyy")}
+                  {lastUpdate && (
+                    <>
+                      {" · "}
+                      Update:{" "}
+                      {formatDistanceToNow(lastUpdate, {
+                        addSuffix: true,
+                        locale: idLocale,
+                      })}
+                    </>
+                  )}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -461,8 +648,9 @@ export default function RainfallHistoryTab() {
                 Mengambil data history...
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Ini mungkin perlu beberapa saat tergantung rentang tanggal yang
-                dipilih.
+                {cacheInfo
+                  ? "Mengambil data terbaru dari Open-Meteo..."
+                  : "Ini mungkin perlu beberapa saat tergantung rentang tanggal yang dipilih."}
               </p>
             </div>
           </div>
