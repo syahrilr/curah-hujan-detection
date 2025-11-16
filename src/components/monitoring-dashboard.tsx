@@ -39,10 +39,12 @@ import {
   BarChart,
   Monitor,
   Radar,
-  Settings, // Icon baru ditambahkan
+  Settings,
+  Cloud, // Icon baru ditambahkan
 } from "lucide-react";
 // Impor komponen tab baru
 import RainfallHistoryTab from "./history/rainfall-historycal-tab";
+import ForecastTab from "./forecast/forecast-tab";
 
 interface DetectedLocation {
   lat: number;
@@ -210,22 +212,26 @@ export default function MonitoringDashboard() {
 
         <Tabs defaultValue="monitor" className="space-y-6">
           {/* PERBARUI: Tambah 1 kolom (grid-cols-4) untuk tab baru */}
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[750px]">
             <TabsTrigger value="monitor">
-              <Monitor className="size-4 mr-2"/>
+              <Monitor className="size-4 mr-2" />
               Monitor
             </TabsTrigger>
             <TabsTrigger value="radar">
-              <Radar className="size-4 mr-2"/>
+              <Radar className="size-4 mr-2" />
               Radar Image
             </TabsTrigger>
-            {/* TAMBAH: Tab History Baru */}
             <TabsTrigger value="history">
               <BarChart className="h-4 w-4 mr-2" />
               History
             </TabsTrigger>
+            {/* NEW TAB */}
+            <TabsTrigger value="forecast">
+              <Cloud className="h-4 w-4 mr-2" />
+              Forecast
+            </TabsTrigger>
             <TabsTrigger value="settings">
-              <Settings className="size-4 mr-2"/>
+              <Settings className="size-4 mr-2" />
               Settings
             </TabsTrigger>
           </TabsList>
@@ -780,6 +786,9 @@ export default function MonitoringDashboard() {
           <TabsContent value="history" className="space-y-6">
             <RainfallHistoryTab />
           </TabsContent>
+          <TabsContent value="forecast" className="space-y-6">
+            <ForecastTab />
+          </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
             {/* Cron Settings */}
@@ -945,4 +954,3 @@ export default function MonitoringDashboard() {
     </div>
   );
 }
-

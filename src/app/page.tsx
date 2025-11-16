@@ -2,85 +2,128 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Map,
-  Activity,
-  History,
-  ArrowRight,
-  Zap,
-  Bell,
-  Database,
-  Clock
-} from 'lucide-react'
+import { Map, Activity, ImageIcon, History, TrendingUp, BarChart3, Brain, Zap, CloudRain, ArrowRight, Database, Bell, Clock, Gauge, RefreshCw } from 'lucide-react'
+import { RainAnimation } from '@/components/rain-animation'
 
 export default function HomePage() {
   const features = [
     {
       icon: Map,
       title: 'Interactive Radar Map',
-      description: 'Real-time BMKG radar overlay with rainfall intensity visualization',
+      description: 'Real-time BMKG radar overlay dengan visualisasi intensitas curah hujan. Pantau pola hujan secara langsung di lokasi stasiun pompa Anda.',
       href: '/radar',
       badge: 'Real-time',
+      color: 'from-blue-500 to-blue-600',
     },
     {
       icon: Activity,
       title: 'Auto Monitoring',
-      description: 'Automatic rainfall detection at pump station locations with alerts',
+      description: 'Sistem monitoring otomatis yang mendeteksi curah hujan di lokasi stasiun pompa. Simpan data terbaru dari radar BMKG secara berkala tanpa intervensi manual.',
       href: '/monitoring',
       badge: 'Automated',
+      color: 'from-cyan-500 to-blue-500',
+    },
+    {
+      icon: ImageIcon,
+      title: 'Radar Image',
+      description: 'Tampilkan gambar radar terakhir dengan resolusi tinggi. Analisis visual kondisi cuaca real-time dengan citra radar BMKG Jakarta yang selalu terbaru.',
+      href: '/radar-image',
+      badge: 'Latest',
+      color: 'from-blue-400 to-cyan-400',
     },
     {
       icon: History,
-      title: 'Historical Data',
-      description: 'Browse and analyze past rainfall records with filtering options',
+      title: 'History Data',
+      description: 'Jelajahi dan analisis riwayat curah hujan lengkap dari semua stasiun pompa. Data historis dari API Open-Meteo dengan filtering dan export options.',
       href: '/history',
       badge: 'Analytics',
+      color: 'from-teal-500 to-blue-600',
+    },
+    {
+      icon: TrendingUp,
+      title: 'Forecast 16 Hari',
+      description: 'Prediksi curah hujan untuk 16 hari ke depan di semua lokasi. Auto forecast berjalan setiap 14 hari sekali untuk memastikan data selalu akurat dan terkini.',
+      href: '/forecast',
+      badge: 'Predictive',
+      color: 'from-sky-500 to-blue-500',
+    },
+    {
+      icon: BarChart3,
+      title: 'Data Comparison',
+      description: 'Bandingkan data curah hujan dari Open-Meteo dan BMKG secara side-by-side. Identifikasi perbedaan dan validasi akurasi kedua sumber data.',
+      href: '/comparison',
+      badge: 'Analysis',
+      color: 'from-blue-500 to-indigo-600',
+    },
+    {
+      icon: Brain,
+      title: 'Rainfall Prediction',
+      description: 'Prediksi curah hujan menggunakan Optical Flow algorithm. Teknologi AI untuk forecasting curah hujan jangka pendek dengan akurasi tinggi.',
+      href: '/prediction',
+      badge: 'AI-Powered',
+      color: 'from-indigo-500 to-purple-600',
+    },
+    {
+      icon: Database,
+      title: 'Auto History Sync',
+      description: 'Sinkronisasi otomatis data historis curah hujan dari berbagai sumber. Sistem background jobs yang mengambil dan menyimpan data history secara konsisten.',
+      href: '/auto-history',
+      badge: 'Background',
+      color: 'from-slate-500 to-blue-600',
     },
   ]
 
   const stats = [
-    { icon: Zap, label: 'Real-time Updates', value: 'Every 5 min' },
-    { icon: Bell, label: 'Alert System', value: 'Auto' },
-    { icon: Database, label: 'Data Tracking', value: 'Multi-location' },
-    { icon: Clock, label: 'Monitoring', value: '24/7' },
+    { icon: CloudRain, label: 'Real-time Updates', value: 'Every 5 min', desc: 'Data BMKG' },
+    { icon: Gauge, label: 'Monitoring', value: '24/7', desc: 'All Locations' },
+    { icon: RefreshCw, label: 'Auto Forecast', value: '14 Days', desc: 'Cycle' },
+    { icon: Database, label: 'Data Source', value: 'Multi', desc: 'BMKG + OpenMeteo' },
   ]
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative overflow-hidden">
+      <RainAnimation />
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-background to-blue-50 dark:from-blue-950 dark:via-background dark:to-blue-950" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+      <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-32">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
+          <div className="absolute top-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-8">
-            <Badge variant="secondary" className="gap-2">
-              <Zap className="h-3 w-3" />
-              Powered by BMKG Radar Data
+            <Badge variant="secondary" className="gap-2 justify-center mx-auto">
+              <CloudRain className="h-4 w-4 text-primary" />
+              Powered by BMKG Radar & OpenMeteo
             </Badge>
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
-              <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-                Rainfall Monitoring
-              </span>
-              <br />
-              <span className="text-foreground">System</span>
-            </h1>
+            <div className="space-y-4">
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-balance">
+                <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                  Rainfall Monitoring
+                </span>
+                <br />
+                <span className="text-foreground">System</span>
+              </h1>
 
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Real-time rainfall monitoring and alert system for pump station management.
-              Automatic detection with notifications powered by BMKG radar integration.
-            </p>
+              <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+                Platform monitoring curah hujan terpadu dengan teknologi real-time BMKG radar, forecasting 16 hari, AI prediction, dan multi-source data comparison untuk manajemen stasiun pompa yang optimal.
+              </p>
+            </div>
 
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="flex flex-wrap gap-4 justify-center pt-4">
               <Button asChild size="lg" className="gap-2">
                 <Link href="/radar">
                   <Map className="h-5 w-5" />
-                  Open Radar Map
+                  Buka Radar Map
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="gap-2">
                 <Link href="/monitoring">
                   <Activity className="h-5 w-5" />
-                  Start Monitoring
+                  Mulai Monitoring
                 </Link>
               </Button>
             </div>
@@ -89,68 +132,70 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tight">System Features</h2>
-          <p className="text-muted-foreground mt-2">
-            Comprehensive tools for rainfall monitoring and analysis
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold tracking-tight text-balance">Fitur Lengkap Monitoring</h2>
+          <p className="text-muted-foreground mt-4 text-lg">
+            Delapan tools powerful untuk monitoring, forecasting, dan analisis curah hujan
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => {
             const Icon = feature.icon
             return (
-              <Card
-                key={feature.href}
-                className="group hover:shadow-lg transition-all border-2 hover:border-primary"
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Icon className="h-6 w-6 text-primary" />
+              <Link key={feature.href} href={feature.href}>
+                <Card className="h-full hover:shadow-xl hover:border-primary/50 transition-all duration-300 cursor-pointer group hover:scale-105">
+                  <CardHeader>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`p-3 bg-gradient-to-br ${feature.color} rounded-lg`}>
+                        <Icon className="h-6 w-6 text-white" />
+                      </div>
+                      <Badge variant="secondary" className="text-xs">{feature.badge}</Badge>
                     </div>
-                    <Badge variant="secondary">{feature.badge}</Badge>
-                  </div>
-                  <CardTitle className="mt-4">{feature.title}</CardTitle>
-                  <CardDescription>{feature.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild variant="ghost" className="gap-2 group-hover:gap-4 transition-all">
-                    <Link href={feature.href}>
-                      Open Feature
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-sm leading-relaxed mb-4">
+                      {feature.description}
+                    </CardDescription>
+                    <Button variant="ghost" size="sm" className="gap-2 group-hover:gap-3 transition-all">
+                      Explore
                       <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
             )
           })}
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl">System Capabilities</CardTitle>
-            <CardDescription>
-              Built for reliability and real-time performance
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/10">
+          <CardHeader className="text-center pb-8">
+            <CardTitle className="text-3xl">Kapabilitas Sistem</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Dirancang untuk reliabilitas, performa real-time, dan akurasi data
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 md:grid-cols-4">
+            <div className="grid gap-8 md:grid-cols-4">
               {stats.map((stat, index) => {
                 const Icon = stat.icon
                 return (
-                  <div key={index} className="text-center space-y-2">
+                  <div key={index} className="text-center space-y-3">
                     <div className="flex justify-center">
-                      <div className="p-3 bg-primary/10 rounded-full">
-                        <Icon className="h-6 w-6 text-primary" />
+                      <div className="p-4 bg-gradient-to-br from-primary to-accent rounded-full">
+                        <Icon className="h-6 w-6 text-white" />
                       </div>
                     </div>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+                    <div className="space-y-1">
+                      <div className="text-2xl font-bold text-primary">{stat.value}</div>
+                      <div className="text-sm font-semibold text-foreground">{stat.label}</div>
+                      <div className="text-xs text-muted-foreground">{stat.desc}</div>
+                    </div>
                   </div>
                 )
               })}
@@ -159,55 +204,100 @@ export default function HomePage() {
         </Card>
       </section>
 
-      {/* Info Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+      {/* Details Section */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5 text-primary" />
-                Data Source
+                <CloudRain className="h-5 w-5 text-primary" />
+                Data Sources
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>• BMKG Radar Jakarta (JAK)</p>
-              <p>• Updates every 5 minutes</p>
-              <p>• Marshall-Palmer Z-R relationship</p>
-              <p>• High-resolution radar imagery</p>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <p className="font-semibold text-foreground">BMKG Radar Jakarta</p>
+                <p className="text-muted-foreground">Update setiap 5 menit dengan resolusi tinggi</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Open-Meteo API</p>
+                <p className="text-muted-foreground">Historical & forecast data untuk 16 hari</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Optical Flow Algorithm</p>
+                <p className="text-muted-foreground">Prediksi rainfall AI-powered</p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
+                <Bell className="h-5 w-5 text-accent" />
                 Alert System
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>• Automatic monitoring every 10 minutes</p>
-              <p>• Customizable rainfall thresholds</p>
-              <p>• Database logging for all alerts</p>
-              <p>• Real-time notification support</p>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <p className="font-semibold text-foreground">Monitoring Otomatis</p>
+                <p className="text-muted-foreground">Deteksi setiap 10 menit di semua lokasi</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Custom Thresholds</p>
+                <p className="text-muted-foreground">Atur ambang batas per stasiun pompa</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Data Logging</p>
+                <p className="text-muted-foreground">Semua alert dicatat untuk audit trail</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-blue-500" />
+                Auto Features
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <p className="font-semibold text-foreground">Auto Save Monitoring</p>
+                <p className="text-muted-foreground">Simpan data BMKG terbaru otomatis</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Auto Forecast Cycle</p>
+                <p className="text-muted-foreground">Update forecast setiap 14 hari</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Auto History Sync</p>
+                <p className="text-muted-foreground">Sinkronisasi background jobs</p>
+              </div>
             </CardContent>
           </Card>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <Card className="bg-gradient-to-r from-blue-600 to-blue-500 border-0">
-          <CardHeader className="text-center text-white">
-            <CardTitle className="text-3xl">Ready to Start Monitoring?</CardTitle>
-            <CardDescription className="text-blue-100">
-              Get started with real-time rainfall monitoring in minutes
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <Card className="bg-gradient-to-r from-primary to-accent border-0">
+          <CardHeader className="text-center text-primary-foreground">
+            <CardTitle className="text-3xl">Siap Memulai?</CardTitle>
+            <CardDescription className="text-primary-foreground/80 text-lg mt-2">
+              Mulai monitoring curah hujan real-time untuk stasiun pompa Anda sekarang
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center gap-4">
+          <CardContent className="flex flex-wrap gap-4 justify-center">
             <Button asChild size="lg" variant="secondary" className="gap-2">
               <Link href="/monitoring">
                 <Activity className="h-5 w-5" />
-                Open Dashboard
+                Dashboard Monitoring
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary" className="gap-2">
+              <Link href="/forecast">
+                <TrendingUp className="h-5 w-5" />
+                Lihat Forecast
               </Link>
             </Button>
           </CardContent>

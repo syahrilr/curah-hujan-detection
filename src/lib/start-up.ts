@@ -1,4 +1,5 @@
 import { initializeHistoryCronJob } from "./init-history-cron";
+import { initializeForecastCronJob } from "./init-forecast-cron";
 
 let isStartupComplete = false;
 
@@ -14,12 +15,17 @@ export function initializeServerStartup() {
   // Initialize rainfall monitoring cron (real-time alerts)
   console.log("\n📡 1. Rainfall Monitoring Cron Job:");
   console.log("─".repeat(60));
-//   initializeCronJob();
+  // initializeCronJob(); // Your existing monitor cron
 
   // Initialize history data collection cron (daily backup)
   console.log("\n💾 2. History Data Collection Cron Job:");
   console.log("─".repeat(60));
   initializeHistoryCronJob();
+
+  // Initialize forecast data collection cron (every 14 days)
+  console.log("\n🌦️ 3. Forecast Data Collection Cron Job:");
+  console.log("─".repeat(60));
+  initializeForecastCronJob();
 
   console.log("=".repeat(60));
   console.log("✅ SERVER STARTUP COMPLETE");
