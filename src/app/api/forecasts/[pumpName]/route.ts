@@ -4,13 +4,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: Request,
-  { params }: { params: { pumpName: string } }
+  context: { params: Promise<{ pumpName: string }> }
 ) {
   try {
-    const { getForecastCollection } = await import('@/lib/forecast')
-    const pumpName = decodeURIComponent(params.pumpName)
+    const { pumpName } = await context.params
+    const decodedPumpName = decodeURIComponent(pumpName)
 
-    const collection = await getForecastCollection(pumpName)
+    const { getForecastCollection } = await import('@/lib/forecast')
+    const collection = await getForecastCollection(decodedPumpName)
 
     const latestForecast = await collection
       .find()
@@ -33,14 +34,17 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      data: latestForecast[0]
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
+    return NextResponse.json(
+      {
+        success: true,
+        data: latestForecast[0]
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        }
       }
-    })
+    )
 
   } catch (error) {
     console.error('Error fetching forecast:', error)
