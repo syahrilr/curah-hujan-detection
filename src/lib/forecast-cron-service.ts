@@ -1,31 +1,28 @@
 import * as cron from "node-cron";
 import { getHardcodedPumpLocations } from "./kml-parser";
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient, ServerApiVersion, Db } from "mongodb";
 import { format, addDays } from "date-fns";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = "db-predict-ch";
 const MONGODB_ENABLED = !!MONGODB_URI;
 
+// Configuration
+const API_DELAY_MS = 1500; // 1.5 seconds between API calls
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 5000;
+
+// Global state
 let cronJob: cron.ScheduledTask | null = null;
 let isRunning = false;
 let lastRunStats: any = null;
 let errorCount = 0;
 let successCount = 0;
 
-// MongoDB Client
-let client: MongoClient | null = null;
-if (MONGODB_ENABLED) {
-  client = new MongoClient(MONGODB_URI, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-    },
-    connectTimeoutMS: 10000,
-    serverSelectionTimeoutMS: 10000,
-  });
-}
+// 🛑 FUNGSI INDEXING DIHAPUS SEMUA 🛑
+// const indexedCollections = new Set<string>();
+// async function ensureCollectionIndexes(...) { ... }
+// async function initializeAllIndexes(...) { ... }
 
 interface OpenMeteoResponse {
   latitude: number;
@@ -67,54 +64,91 @@ interface ForecastDocument {
  * Helper untuk membuat nama collection dari nama pompa
  */
 function getCollectionName(pumpName: string): string {
-  return (
+  const collectionName =
     "prediction_" +
     pumpName
       .toLowerCase()
       .replace(/\s+/g, "_")
-      .replace(/[^a-z0-9_]/g, "")
-  );
+      .replace(/[^a-z0-9_]/g, "");
+  return collectionName;
 }
 
 /**
- * Fetch forecast dari Open-Meteo API
+ * Fetch forecast dari Open-Meteo API dengan retry mechanism
  */
 async function fetchForecastForPump(
   lat: number,
-  lng: number
+  lng: number,
+  retries = MAX_RETRIES
 ): Promise<OpenMeteoResponse> {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,rain,precipitation,precipitation_probability&timezone=auto&forecast_days=16`;
 
-  const response = await fetch(url, {
-    cache: "no-store",
-  });
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(
+        `      [API] Attempt ${attempt}/${retries}: Fetching from Open-Meteo...`
+      );
+      const response = await fetch(url, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000), // 15 detik timeout
+      });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch forecast: ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(
+          `HTTP ${response.status}: ${response.statusText} for URL: ${url}`
+        );
+      }
+
+      console.log(`      [API] Attempt ${attempt} successful.`);
+      return await response.json();
+    } catch (error) {
+      const isLastAttempt = attempt === retries;
+      console.warn(
+        `      [API] Attempt ${attempt}/${retries} failed: ${
+          (error as Error).message
+        }`
+      );
+
+      if (isLastAttempt) {
+        console.error(
+          `   ❌ [API] Fetch failed after ${retries} attempts.`
+        );
+        throw error; // Lempar error setelah percobaan terakhir
+      }
+
+      console.warn(
+        `      [API] Retrying in ${RETRY_DELAY_MS / 1000}s...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    }
   }
 
-  return response.json();
+  // This should be unreachable
+  throw new Error("Unexpected error in fetchForecastForPump");
 }
 
 /**
- * Simpan forecast ke MongoDB dengan collection terpisah per pompa
+ * 🛑 FUNGSI INDEXING DIHAPUS SEMUA 🛑
  */
-async function saveForecastToMongoDB(
+
+/**
+ * Menyimpan forecast ke MongoDB
+ */
+async function saveForecastToMongoDBOptimized(
+  db: Db | null,
   pumpName: string,
   pumpLat: number,
   pumpLng: number,
   forecastData: OpenMeteoResponse
 ): Promise<{ saved: boolean; collection?: string; error?: string }> {
-  if (!MONGODB_ENABLED || !client) {
-    console.log("   ⚠️ MongoDB disabled - data tidak disimpan");
+  if (!db) {
+    console.warn("   [DB] MongoDB disabled - data tidak disimpan");
     return { saved: false };
   }
 
-  try {
-    await client.connect();
-    const db = client.db(DB_NAME);
+  const collectionName = getCollectionName(pumpName);
 
-    const collectionName = getCollectionName(pumpName);
+  try {
     const collection = db.collection<ForecastDocument>(collectionName);
 
     // Prepare document
@@ -136,143 +170,127 @@ async function saveForecastToMongoDB(
       dataPoints: forecastData.hourly.time.length,
     };
 
-    // Insert document
-    await collection.insertOne(document);
-
-    // Create indexes untuk optimasi query
-    await collection.createIndex({ fetchedAt: -1 });
-    await collection.createIndex({ forecastStartDate: 1 });
-    await collection.createIndex({ forecastEndDate: 1 });
+    // ✅ Only insert - NO index creation here
+    console.log(`      [DB] Saving document to collection: ${collectionName}`);
+    const result = await collection.insertOne(document);
+    console.log(
+      `      [DB] Document inserted successfully. ID: ${result.insertedId}`
+    );
 
     return {
       saved: true,
       collection: collectionName,
     };
   } catch (dbError) {
-    console.error("   ❌ MongoDB error:", (dbError as Error).message);
+    console.error(
+      `   ❌ [DB] Error saving to ${collectionName}:`,
+      (dbError as Error).message
+    );
     return {
       saved: false,
       error: (dbError as Error).message,
     };
-  } finally {
-    try {
-      await client.close();
-    } catch (closeError) {
-      console.warn("   ⚠️ Error closing MongoDB connection:", closeError);
-    }
   }
 }
 
 /**
- * Cleanup old forecast data (older than 30 days)
+ * 🛑 FUNGSI CLEANUP DIHAPUS (Sesuai permintaan) 🛑
  */
-async function cleanupOldForecasts(): Promise<{
-  success: boolean;
-  deletedCount: number;
-  collections: string[];
-}> {
-  if (!MONGODB_ENABLED || !client) {
-    return { success: false, deletedCount: 0, collections: [] };
-  }
+// async function cleanupOldForecastsOptimized( ... ) { ... }
 
-  try {
-    await client.connect();
-    const db = client.db(DB_NAME);
-    const locations = await getHardcodedPumpLocations();
-
-    let totalDeleted = 0;
-    const affectedCollections: string[] = [];
-
-    // Delete forecasts older than 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    for (const location of locations) {
-      try {
-        const collectionName = getCollectionName(location.name);
-        const collection = db.collection(collectionName);
-
-        const result = await collection.deleteMany({
-          fetchedAt: { $lt: thirtyDaysAgo },
-        });
-
-        if (result.deletedCount > 0) {
-          totalDeleted += result.deletedCount;
-          affectedCollections.push(collectionName);
-        }
-      } catch (error) {
-        console.error(
-          `   ⚠️ Cleanup failed for ${location.name}:`,
-          (error as Error).message
-        );
-      }
-    }
-
-    return {
-      success: true,
-      deletedCount: totalDeleted,
-      collections: affectedCollections,
-    };
-  } catch (error) {
-    console.error("   ❌ Cleanup error:", (error as Error).message);
-    return { success: false, deletedCount: 0, collections: [] };
-  } finally {
-    try {
-      await client.close();
-    } catch (closeError) {
-      console.warn("   ⚠️ Error closing MongoDB connection:", closeError);
-    }
-  }
-}
 
 /**
- * Fungsi utama untuk mengambil dan menyimpan forecast semua lokasi
+ * ✅ FUNGSI UTAMA
+ * Fungsi ini sekarang TIDAK lagi memanggil initializeAllIndexes
  */
 async function fetchAndSaveAllForecastsData() {
-  console.log(`\n🌦️ Starting forecast fetch for all pump stations...`);
+  console.log(`\n🌦️ [MAIN] Starting forecast fetch for all pump stations...`);
   console.log(
-    `   Forecast period: 16 days (${format(new Date(), "yyyy-MM-dd")} to ${format(addDays(new Date(), 16), "yyyy-MM-dd")})`
+    `   [MAIN] Forecast period: 16 days (${format(
+      new Date(),
+      "yyyy-MM-dd"
+    )} to ${format(addDays(new Date(), 16), "yyyy-MM-dd")})`
   );
+
+  let client: MongoClient | null = null;
+  let db: Db | null = null;
 
   try {
     const locations = await getHardcodedPumpLocations();
-    console.log(`   Total pump stations: ${locations.length}`);
-    console.log(`   Database: ${DB_NAME}\n`);
+    console.log(`   [MAIN] Total pump stations: ${locations.length}`);
+    console.log(`   [MAIN] Database: ${DB_NAME}\n`);
+
+    // ✅ Connect to MongoDB ONCE
+    if (MONGODB_ENABLED && MONGODB_URI) {
+      try {
+        console.log(`   🔌 [DB] Connecting to MongoDB...`);
+        client = new MongoClient(MONGODB_URI, {
+          serverApi: {
+            version: ServerApiVersion.v1,
+            strict: true,
+            deprecationErrors: true,
+          },
+          connectTimeoutMS: 10000,
+          serverSelectionTimeoutMS: 10000,
+        });
+
+        await client.connect();
+        await client.db("admin").command({ ping: 1 });
+
+        db = client.db(DB_NAME);
+        console.info(`   [DB] MongoDB connected to database: ${DB_NAME}\n`);
+
+        // 🛑 PANGGILAN UNTUK INDEXING DI AWAL SUDAH DIHAPUS 🛑
+
+      } catch (dbError) {
+        console.error("   ❌ [DB] MongoDB connection failed:", dbError);
+        // Jangan lanjutkan jika DB gagal konek
+        throw new Error(`MongoDB connection failed: ${(dbError as Error).message}`);
+      }
+    } else {
+      console.warn(
+        "   [DB] MONGODB_URI not found. Running in-memory (no data will be saved)."
+      );
+    }
 
     const results = [];
+    console.log(`\n--- [START] Processing ${locations.length} stations ---`);
 
+    // Process each location
     for (let i = 0; i < locations.length; i++) {
       const location = locations[i];
-      console.log(`[${i + 1}/${locations.length}] Processing: ${location.name}`);
+      console.log(
+        `\n--- [${i + 1}/${
+          locations.length
+        }] Processing: ${location.name} (Lat: ${location.lat}, Lng: ${
+          location.lng
+        }) ---`
+      );
 
       try {
-        // Fetch dari Open-Meteo API
-        console.log(`   🌍 Fetching 16-day forecast from Open-Meteo...`);
+        // Fetch from Open-Meteo API
         const forecastData = await fetchForecastForPump(
           location.lat,
           location.lng
         );
 
         const dataPoints = forecastData.hourly.time.length;
-        console.log(`   ✓ Received ${dataPoints} hourly data points`);
+        console.log(`      [API] Received ${dataPoints} hourly data points`);
 
-        // Simpan ke MongoDB
-        console.log(`   💾 Saving to MongoDB...`);
-        const saveResult = await saveForecastToMongoDB(
+        // Save to MongoDB (fast - no index creation)
+        const saveResult = await saveForecastToMongoDBOptimized(
+          db,
           location.name,
           location.lat,
           location.lng,
           forecastData
         );
 
-        if (saveResult.saved) {
-          console.log(
-            `   ✓ Saved to collection: ${saveResult.collection}`
-          );
-        } else {
-          console.log(`   ⚠️ Not saved to MongoDB`);
-        }
+        // 🛑 PANGGILAN UNTUK BACKGROUND INDEXING SUDAH DIHAPUS 🛑
 
+        //
+        // 🐞 BUG FIX: Ini adalah data push yang benar untuk blok TRY
+        //
         results.push({
           location: location.name,
           success: true,
@@ -284,33 +302,39 @@ async function fetchAndSaveAllForecastsData() {
             forecastData.hourly.time[forecastData.hourly.time.length - 1],
         });
 
-        console.log(`   ✅ Completed\n`);
+        console.log(`   [MAIN] Successfully processed ${location.name}`);
 
-        // Delay untuk respect API rate limits
+        // Rate limiting: delay between requests
         if (i < locations.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          console.log(`      [SYSTEM] Waiting ${API_DELAY_MS}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, API_DELAY_MS));
         }
+
       } catch (error) {
-        console.error(`   ❌ Error: ${(error as Error).message}\n`);
+        // Ini adalah blok CATCH
+        console.error(
+          `   ❌ [MAIN] Failed to process ${location.name}: ${
+            (error as Error).message
+          }`
+        );
         results.push({
           location: location.name,
           success: false,
           error: (error as Error).message,
         });
+
+        // Jika terjadi error, beri jeda juga sebelum mencoba stasiun berikutnya.
+        if (i < locations.length - 1) {
+          console.warn(`      [SYSTEM] Error occurred. Waiting ${API_DELAY_MS}ms before next station...`);
+          await new Promise((resolve) => setTimeout(resolve, API_DELAY_MS));
+        }
       }
     }
 
-    // Cleanup old data setelah fetch selesai
-    console.log(`\n🧹 Cleaning up old forecast data (>30 days)...`);
-    const cleanupResult = await cleanupOldForecasts();
-    if (cleanupResult.success && cleanupResult.deletedCount > 0) {
-      console.log(
-        `   ✓ Deleted ${cleanupResult.deletedCount} old forecast records`
-      );
-      console.log(`   ✓ Affected collections: ${cleanupResult.collections.length}`);
-    } else {
-      console.log(`   ℹ️ No old data to clean up`);
-    }
+    console.log(`\n--- [END] Finished processing all stations ---`);
+
+    // 🛑 PANGGILAN CLEANUP DIHAPUS (Sesuai permintaan) 🛑
+    // const cleanupResult = await cleanupOldForecastsOptimized(db);
 
     return {
       success: true,
@@ -318,57 +342,76 @@ async function fetchAndSaveAllForecastsData() {
       successCount: results.filter((r) => r.success).length,
       failedCount: results.filter((r) => !r.success).length,
       results: results,
-      cleanup: cleanupResult,
+      // 🛑 cleanupResult dihapus dari return
+      // cleanup: cleanupResult,
     };
   } catch (error) {
-    console.error("❌ Fatal error in fetchAndSaveAllForecastsData:", error);
+    console.error("❌ [MAIN] Fatal error in fetchAndSaveAllForecastsData:", error);
     throw error;
+  } finally {
+    // ✅ Close connection ONCE at the end
+    if (client) {
+      try {
+        await client.close();
+        console.log("\n   🔌 [DB] MongoDB connection closed.");
+      } catch (closeError) {
+        console.warn("   ⚠️ [DB] Error closing MongoDB connection:", closeError);
+      }
+    }
   }
 }
 
 /**
  * Start automatic forecast data collection
- * Default schedule: Setiap 14 hari sekali
- * @param schedule - Cron expression (default: "0 0 *\/14 * *" = setiap 14 hari at midnight)
+ * Default schedule: Every 14 days at midnight
  */
 export function startForecastCronJob(schedule: string = "0 0 */14 * *") {
   if (isRunning) {
-    console.log("⚠️ Forecast cron job already running");
+    console.warn("⚠️ [CRON] Forecast cron job already running");
     return;
   }
 
   if (!MONGODB_ENABLED) {
-    console.error("❌ Cannot start cron job: MONGODB_URI not configured");
+    console.error("❌ [CRON] Cannot start cron job: MONGODB_URI not configured");
     return;
   }
 
-  console.log("\n🚀 Starting forecast data collection cron job...");
-  console.log(`   Schedule: ${schedule}`);
-  console.log(`   Forecast period: 16 days`);
-  console.log(`   Database: ${DB_NAME}`);
-  console.log(`   Next run: ${getNextRunTime(schedule)}\n`);
+  if (!cron.validate(schedule)) {
+    console.error(`❌ [CRON] Invalid cron schedule: ${schedule}`);
+    return;
+  }
+
+  console.log("\n🚀 [CRON] Starting forecast data collection cron job...");
+  console.log(`   [CRON] Schedule: ${schedule}`);
+  console.log(`   [CRON] Forecast period: 16 days`);
+  console.log(`   [CRON] Database: ${DB_NAME}`);
+  console.log(`   [CRON] API delay: ${API_DELAY_MS}ms between requests`);
+  console.log(`   [CRON] Max retries: ${MAX_RETRIES}\n`);
 
   cronJob = cron.schedule(schedule, async () => {
     const startTime = Date.now();
-    console.log("\n⏰ Forecast cron job triggered:", new Date().toLocaleString("id-ID"));
-    console.log("━".repeat(60));
+    console.log(
+      `\n⏰ [CRON] Job triggered at: ${new Date().toLocaleString("id-ID")}`
+    );
+    console.log("═".repeat(60));
+    console.log(`   [CRON] Calling fetchAndSaveAllForecastsData...`);
 
     try {
       const result = await fetchAndSaveAllForecastsData();
 
       const duration = Date.now() - startTime;
-      console.log("\n" + "━".repeat(60));
-      console.log("📊 Summary:");
-      console.log(`   Total locations: ${result.totalLocations}`);
-      console.log(`   ✅ Success: ${result.successCount}`);
-      console.log(`   ❌ Failed: ${result.failedCount}`);
-      console.log(
-        `   🧹 Cleaned up: ${result.cleanup.deletedCount} old records`
-      );
-      console.log(`   ⏱️ Duration: ${(duration / 1000).toFixed(2)}s`);
-      console.log("━".repeat(60));
+      console.log("\n" + "═".repeat(60));
+      console.log("📊 [CRON] Summary:");
+      console.log(`   [CRON] Total locations: ${result.totalLocations}`);
+      console.log(`   [CRON] ✅ Success: ${result.successCount}`);
+      console.log(`   [CRON] ❌ Failed: ${result.failedCount}`);
+      // 🛑 Log Cleanup dihapus
+      // console.log(
+      //   `   [CRON] 🧹 Cleaned up: ${result.cleanup.deletedCount} old records`
+      // );
+      console.log(`   [CRON] ⏱️ Duration: ${(duration / 1000).toFixed(2)}s`);
+      console.log("═".repeat(60));
 
-      // Update stats
       successCount++;
       lastRunStats = {
         success: true,
@@ -377,23 +420,24 @@ export function startForecastCronJob(schedule: string = "0 0 */14 * *") {
         totalLocations: result.totalLocations,
         successCount: result.successCount,
         failedCount: result.failedCount,
-        cleanupDeleted: result.cleanup.deletedCount,
+        // 🛑 Properti Cleanup dihapus
+        // cleanupDeleted: result.cleanup.deletedCount,
         results: result.results,
       };
 
-      console.log("✅ Forecast cron job completed successfully\n");
+      console.log("✅ [CRON] Job completed successfully\n");
     } catch (error) {
       errorCount++;
       const duration = Date.now() - startTime;
 
-      console.error("\n" + "━".repeat(60));
-      console.error("❌ Forecast cron job failed:", error);
+      console.error("\n" + "═".repeat(60));
+      console.error("❌ [CRON] Job failed:", error);
 
       if (error instanceof Error) {
-        console.error("   Name:", error.name);
-        console.error("   Message:", error.message);
+        console.error("   [CRON] Name:", error.name);
+        console.error("   [CRON] Message:", error.message);
         if (error.stack) {
-          console.error("   Stack trace (top 5 lines):");
+          console.error("   [CRON] Stack trace (top 5 lines):");
           error.stack
             .split("\n")
             .slice(0, 5)
@@ -403,13 +447,14 @@ export function startForecastCronJob(schedule: string = "0 0 */14 * *") {
         }
       }
 
-      console.error(`   ⏱️ Failed after: ${(duration / 1000).toFixed(2)}s`);
+      console.error(`   [CRON] ⏱️ Failed after: ${(duration / 1000).toFixed(2)}s`);
       console.error(
-        `   📊 Error count: ${errorCount}/${successCount + errorCount} total runs`
+        `   [CRON] 📊 Error count: ${errorCount}/${
+          successCount + errorCount
+        } total runs`
       );
-      console.error("━".repeat(60) + "\n");
+      console.error("═".repeat(60) + "\n");
 
-      // Update stats
       lastRunStats = {
         success: false,
         timestamp: new Date().toISOString(),
@@ -429,8 +474,8 @@ export function startForecastCronJob(schedule: string = "0 0 */14 * *") {
   successCount = 0;
   errorCount = 0;
 
-  console.log("✅ Forecast cron job started successfully");
-  console.log("   Use stopForecastCronJob() to stop\n");
+  console.log("✅ [CRON] Job started successfully");
+  console.log("   [CRON] Use stopForecastCronJob() to stop\n");
 }
 
 /**
@@ -441,12 +486,12 @@ export function stopForecastCronJob() {
     cronJob.stop();
     cronJob = null;
     isRunning = false;
-    console.log("🛑 Forecast cron job stopped");
+    console.log("🛑 [CRON] Forecast cron job stopped.");
     console.log(
-      `   Final stats: ${successCount} successes, ${errorCount} errors`
+      `   [CRON] Final stats: ${successCount} successes, ${errorCount} errors`
     );
   } else {
-    console.log("⚠️ No forecast cron job running");
+    console.warn("⚠️ [CRON] No forecast cron job running to stop.");
   }
 }
 
@@ -454,6 +499,7 @@ export function stopForecastCronJob() {
  * Get forecast cron job status
  */
 export function getForecastCronJobStatus() {
+  // console.log("   [CRON] Getting cron job status..."); // Terlalu verbose
   return {
     isRunning,
     hasJob: cronJob !== null,
@@ -462,6 +508,8 @@ export function getForecastCronJobStatus() {
     database: DB_NAME,
     schedule: "Every 14 days at midnight",
     forecastDays: 16,
+    apiDelayMs: API_DELAY_MS,
+    maxRetries: MAX_RETRIES,
     statistics: {
       successCount,
       errorCount,
@@ -478,15 +526,15 @@ export function getForecastCronJobStatus() {
  * Restart cron job with new settings
  */
 export function restartForecastCronJob(schedule: string) {
-  console.log("🔄 Restarting forecast cron job with new settings...");
-  console.log(`   New schedule: ${schedule}`);
+  console.log("🔄 [CRON] Restarting forecast cron job with new settings...");
+  console.log(`   [CRON] New schedule: ${schedule}`);
 
   stopForecastCronJob();
 
-  // Small delay to ensure clean restart
   setTimeout(() => {
+    console.log("   [CRON] Calling startForecastCronJob() after restart delay...");
     startForecastCronJob(schedule);
-  }, 1000);
+  }, 1000); // Tunda 1 detik untuk memastikan stop selesai
 }
 
 /**
@@ -502,51 +550,28 @@ export function getLastForecastRunStats() {
 export function resetForecastErrorCount() {
   errorCount = 0;
   successCount = 0;
-  console.log("🔄 Forecast statistics reset");
+  console.log("🔄 [CRON] Forecast statistics reset");
 }
 
 /**
  * Manual trigger - run fetch immediately
  */
 export async function triggerManualForecastFetch() {
-  console.log("\n🔧 Manual forecast fetch started...");
+  console.log("\n🔧 [MANUAL] Manual forecast fetch triggered...");
   const startTime = Date.now();
 
   try {
     const result = await fetchAndSaveAllForecastsData();
     const duration = Date.now() - startTime;
 
-    console.log("\n📊 Manual forecast fetch completed:");
-    console.log(`   Success: ${result.successCount}/${result.totalLocations}`);
-    console.log(`   Duration: ${(duration / 1000).toFixed(2)}s\n`);
+    console.log("\n📊 [MANUAL] Manual forecast fetch completed:");
+    console.log(`   [MANUAL] Success: ${result.successCount}/${result.totalLocations}`);
+    console.log(`   [MANUAL] Duration: ${(duration / 1000).toFixed(2)}s\n`);
 
+    // 🛑 Objek 'cleanup' tidak lagi ada di 'result'
     return result;
   } catch (error) {
-    console.error("❌ Manual forecast fetch failed:", error);
-    throw error;
-  }
-}
-
-/**
- * Helper function to get next run time
- */
-function getNextRunTime(schedule: string): string {
-  try {
-    const schedulePattern = cron.validate(schedule);
-    if (!schedulePattern) {
-      return "Invalid schedule";
-    }
-
-    // Untuk schedule 14 hari
-    if (schedule === "0 0 */14 * *") {
-      const fourteenDays = new Date();
-      fourteenDays.setDate(fourteenDays.getDate() + 14);
-      fourteenDays.setHours(0, 0, 0, 0);
-      return fourteenDays.toLocaleString("id-ID");
-    }
-
-    return "According to schedule: " + schedule;
-  } catch {
-    return "Unable to calculate";
+    console.error("❌ [MANUAL] Manual forecast fetch failed:", error);
+    throw error; // Lempar error agar API route bisa menangkapnya
   }
 }

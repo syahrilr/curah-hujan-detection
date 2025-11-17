@@ -174,43 +174,57 @@ export default function ForecastTab() {
   }
 
   const controlCron = async (action: string) => {
-    setIsCronLoading(true)
-    setCronMessage(null)
+  setIsCronLoading(true);
+  setCronMessage(null);
 
-    try {
-      const response = await fetch("/api/forecast-control", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action,
-          schedule: action === "start" || action === "restart" ? cronSchedule : undefined,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setCronMessage({ type: "success", text: data.message })
-        await loadCronStatus()
-
-        // If trigger action, refresh forecast data after a delay
-        if (action === "trigger") {
-          setTimeout(() => {
-            loadAllForecasts()
-          }, 3000)
-        }
-      } else {
-        setCronMessage({ type: "error", text: data.error || "Operation failed" })
-      }
-    } catch (error) {
+  try {
+    // Show estimasi waktu untuk trigger
+    if (action === "trigger") {
       setCronMessage({
-        type: "error",
-        text: error instanceof Error ? error.message : "Unknown error",
-      })
-    } finally {
-      setIsCronLoading(false)
+        type: "success",
+        text: "Fetching data for 48 stations... This will take 2-3 minutes. Please wait..."
+      });
     }
+
+    const response = await fetch("/api/forecast-control", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action,
+        schedule: action === "start" || action === "restart" ? cronSchedule : undefined,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      if (action === "trigger" && data.result) {
+        // Show detailed result
+        setCronMessage({
+          type: "success",
+          text: `Completed! Success: ${data.result.successCount}/${data.result.totalLocations} stations. Cleaned: ${data.result.cleanupDeleted} old records.`
+        });
+      } else {
+        setCronMessage({ type: "success", text: data.message });
+      }
+      await loadCronStatus();
+
+      // Refresh forecast data
+      if (action === "trigger") {
+        await loadAllForecasts();
+      }
+    } else {
+      setCronMessage({ type: "error", text: data.error || "Operation failed" });
+    }
+  } catch (error) {
+    setCronMessage({
+      type: "error",
+      text: error instanceof Error ? error.message : "Unknown error",
+    });
+  } finally {
+    setIsCronLoading(false);
   }
+};
 
   const fetchAllForecasts = async () => {
     setIsFetching(true)
