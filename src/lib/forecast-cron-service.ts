@@ -16,6 +16,7 @@ const RETRY_DELAY_MS = 5000;
 let cronJob: cron.ScheduledTask | null = null;
 let isRunning = false;
 let lastRunStats: any = null;
+let currentSchedule: string = "0 0 */10 * *"; // Ganti default di sini
 let errorCount = 0;
 let successCount = 0;
 
@@ -363,9 +364,9 @@ async function fetchAndSaveAllForecastsData() {
 
 /**
  * Start automatic forecast data collection
- * Default schedule: Every 14 days at midnight
+ * Default schedule: Every 10 days
  */
-export function startForecastCronJob(schedule: string = "0 0 */14 * *") {
+export function startForecastCronJob(schedule: string = "0 0 */10 * *") {
   if (isRunning) {
     console.warn("⚠️ [CRON] Forecast cron job already running");
     return;
@@ -387,6 +388,8 @@ export function startForecastCronJob(schedule: string = "0 0 */14 * *") {
   console.log(`   [CRON] Database: ${DB_NAME}`);
   console.log(`   [CRON] API delay: ${API_DELAY_MS}ms between requests`);
   console.log(`   [CRON] Max retries: ${MAX_RETRIES}\n`);
+
+  currentSchedule = schedule; // Simpan schedule yang sedang berjalan
 
   cronJob = cron.schedule(schedule, async () => {
     const startTime = Date.now();
@@ -486,6 +489,7 @@ export function stopForecastCronJob() {
     cronJob.stop();
     cronJob = null;
     isRunning = false;
+    currentSchedule = "N/A (Stopped)"; // Update status
     console.log("🛑 [CRON] Forecast cron job stopped.");
     console.log(
       `   [CRON] Final stats: ${successCount} successes, ${errorCount} errors`
@@ -506,7 +510,7 @@ export function getForecastCronJobStatus() {
     lastRun: lastRunStats,
     mongodbEnabled: MONGODB_ENABLED,
     database: DB_NAME,
-    schedule: "Every 14 days at midnight",
+    schedule: currentSchedule, // Ganti string hardcoded
     forecastDays: 16,
     apiDelayMs: API_DELAY_MS,
     maxRetries: MAX_RETRIES,

@@ -58,7 +58,7 @@ export default function ForecastCronControlPanel() {
   const [status, setStatus] = useState<CronStatus | null>(null);
   const [lastRun, setLastRun] = useState<LastRun | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [schedule, setSchedule] = useState("0 0 */14 * *");
+  const [schedule, setSchedule] = useState("0 0 */10 * *"); // Ganti default
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -156,7 +156,7 @@ export default function ForecastCronControlPanel() {
                 Forecast Cron Job Status
               </CardTitle>
               <CardDescription>
-                Automatic 16-day forecast collection every 14 days
+                Automatic 16-day forecast collection every 10 days
               </CardDescription>
             </div>
             <Badge
@@ -191,7 +191,7 @@ export default function ForecastCronControlPanel() {
               <Clock className="h-8 w-8 text-orange-600" />
               <div>
                 <p className="text-xs text-muted-foreground">Interval</p>
-                <p className="font-semibold">Every 14 days</p>
+                <p className="font-semibold">Every 10 days</p>
               </div>
             </div>
 
@@ -370,14 +370,17 @@ export default function ForecastCronControlPanel() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0 0 */14 * *">
-                  Every 14 days at midnight (Recommended)
+                <SelectItem value="0 0 * * *">
+                  Setiap hari jam 00:00 (Daily)
                 </SelectItem>
                 <SelectItem value="0 0 */7 * *">
                   Every 7 days at midnight
                 </SelectItem>
-                <SelectItem value="0 2 */14 * *">
-                  Every 14 days at 2 AM
+                <SelectItem value="0 0 */10 * *">
+                  Every 10 days at midnight (Recommended)
+                </SelectItem>
+                <SelectItem value="0 0 */14 * *">
+                  Every 14 days at midnight
                 </SelectItem>
                 <SelectItem value="0 0 1 * *">
                   Monthly on the 1st at midnight
@@ -388,7 +391,7 @@ export default function ForecastCronControlPanel() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              ℹ️ 14-day interval recommended: fetches 16-day forecast with 2-day overlap
+              ℹ️ 10-day interval recommended: fetches 16-day forecast with 6-day overlap
             </p>
           </div>
 
@@ -443,8 +446,7 @@ export default function ForecastCronControlPanel() {
               <strong>How it works:</strong>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Fetches 16-day forecast for all 48 pump stations</li>
-                <li>Runs every 14 days (2-day overlap ensures continuity)</li>
-                <li>Automatically cleans up forecast data older than 30 days</li>
+                <li>Runs every 10 days (6-day overlap ensures continuity)</li>
                 <li>Each pump station has its own MongoDB collection</li>
                 <li>Check server logs for detailed progress</li>
               </ul>

@@ -37,12 +37,12 @@ export function initializeForecastCronJob() {
 
   console.log("   [INIT-Forecast] MONGODB_URI found.");
 
-  // Get schedule from environment or use default (every 14 days)
-  const schedule = process.env.FORECAST_CRON_SCHEDULE || "0 0 */14 * *";
+  // Get schedule from environment or use default (every 10 days)
+  const schedule = process.env.FORECAST_CRON_SCHEDULE || "0 0 */10 * *"; // Ganti default
 
   console.log(`   [INIT-Forecast] Schedule set to: ${schedule}`);
   console.log(`   [INIT-Forecast] Forecast period: 16 days ahead`);
-  console.log(`   [INIT-Forecast] Collection interval: Every 14 days (2 days overlap)`);
+  console.log(`   [INIT-Forecast] Collection interval: Every 10 days (6 days overlap)`); // Ganti teks log
 
   console.log("   [INIT-Forecast] Calling startForecastCronJob()...");
   startForecastCronJob(schedule);

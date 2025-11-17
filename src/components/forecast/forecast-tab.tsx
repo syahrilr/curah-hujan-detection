@@ -88,7 +88,7 @@ interface LastRun {
   totalLocations?: number
   successCount?: number
   failedCount?: number
-  cleanupDeleted?: number
+  cleanupDeleted?: number;
   error?: {
     name: string
     message: string
@@ -108,7 +108,7 @@ export default function ForecastTab() {
   // Cron control states
   const [cronStatus, setCronStatus] = useState<CronStatus | null>(null)
   const [cronLastRun, setCronLastRun] = useState<LastRun | null>(null)
-  const [cronSchedule, setCronSchedule] = useState("0 0 */14 * *")
+  const [cronSchedule, setCronSchedule] = useState("0 0 */10 * *") // Ganti default
   const [cronMessage, setCronMessage] = useState<{
     type: "success" | "error"
     text: string
@@ -202,7 +202,7 @@ export default function ForecastTab() {
         // Show detailed result
         setCronMessage({
           type: "success",
-          text: `Completed! Success: ${data.result.successCount}/${data.result.totalLocations} stations. Cleaned: ${data.result.cleanupDeleted} old records.`
+          text: `Completed! Success: ${data.result.successCount}/${data.result.totalLocations} stations.`
         });
       } else {
         setCronMessage({ type: "success", text: data.message });
@@ -466,7 +466,7 @@ export default function ForecastTab() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-lg font-bold text-indigo-600">
-                          14 days
+                          10 days
                         </div>
                         <p className="text-xs text-muted-foreground">Next Update</p>
                       </div>
@@ -666,7 +666,7 @@ export default function ForecastTab() {
                       Automatic Forecast Collection
                     </CardTitle>
                     <CardDescription>
-                      Fetches 16-day forecasts every 14 days (2-day overlap)
+                      Fetches 16-day forecasts every 10 days (6-day overlap)
                     </CardDescription>
                   </div>
                   <Badge variant={cronStatus.isRunning ? "default" : "secondary"} className="gap-2">
@@ -700,7 +700,7 @@ export default function ForecastTab() {
                   </div>
                   <div className="p-3 border rounded-lg">
                     <p className="text-xs text-muted-foreground">Update Interval</p>
-                    <p className="font-semibold">Every 14 days</p>
+                    <p className="font-semibold">Every 10 days</p>
                   </div>
                 </div>
 
@@ -835,14 +835,20 @@ export default function ForecastTab() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="0 0 */14 * *">
-                          Every 14 days at midnight (Recommended)
+                        <SelectItem value="0 0 * * *">
+                          Setiap hari jam 00:00 (Daily)
                         </SelectItem>
                         <SelectItem value="0 0 */7 * *">
                           Every 7 days at midnight
                         </SelectItem>
-                        <SelectItem value="0 2 */14 * *">
-                          Every 14 days at 2 AM
+                        <SelectItem value="0 0 */10 * *">
+                          Every 10 days at midnight (Recommended)
+                        </SelectItem>
+                        <SelectItem value="0 0 */14 * *">
+                          Every 14 days at midnight
+                        </SelectItem>
+                         <SelectItem value="0 0 1 * *">
+                          Monthly on the 1st at midnight
                         </SelectItem>
                         <SelectItem value="*/5 * * * *">
                           Every 5 minutes (Testing)
@@ -900,8 +906,7 @@ export default function ForecastTab() {
                       <strong>How it works:</strong>
                       <ul className="list-disc list-inside mt-2 space-y-1">
                         <li>Fetches 16-day forecast for all {pumpLocations.length} pump stations</li>
-                        <li>Runs every 14 days (2-day overlap ensures continuity)</li>
-                        <li>Automatically cleans up data older than 30 days</li>
+                        <li>Runs every 10 days (6-day overlap ensures continuity)</li>
                         <li>Each station has its own MongoDB collection</li>
                       </ul>
                     </AlertDescription>
