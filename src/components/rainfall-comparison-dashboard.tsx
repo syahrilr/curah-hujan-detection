@@ -6,6 +6,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Activity, AlertCircle, Calendar, Download, Loader2, TrendingUp } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import {
@@ -24,9 +25,10 @@ interface ComparisonData {
   timestamp: string
   bmkgRainfall: number | null
   openMeteoRainfall: number | null
+  forecastRainfall: number | null
   difference: number | null
   location: string
-  source: "bmkg" | "openmeteo" | "both"
+  source: "bmkg" | "openmeteo" | "both" | "forecast"
   dataCount?: number
   minValue?: number
   maxValue?: number
@@ -45,10 +47,24 @@ interface RawOpenMeteoData {
   rainfall: number
 }
 
+interface RawForecastData {
+  pumpName: string
+  hourly: {
+    time: string[]
+    rain: number[]
+    precipitation: number[]
+    precipitation_probability: number[]
+  }
+  fetchedAt: string
+  forecastStartDate: string
+  forecastEndDate: string
+}
+
+// Interface Generic untuk Statistik
 interface StatsSummary {
   totalDataPoints: number
-  bmkgAvg: number
-  openMeteoAvg: number
+  avg1: number // Generic Average 1
+  avg2: number // Generic Average 2
   rmse: number
   mae: number
   bias: number
@@ -76,9 +92,7 @@ function formatTimestampForCSV(isoString: string): string {
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const bmkgData = payload.find((p: any) => p.dataKey === "bmkgRainfall")
-    const dataPoint = bmkgData?.payload
-
+    const dataPoint = payload[0].payload
     const formattedTime = formatTimestampForCSV(dataPoint?.timestamp || label)
 
     return (
@@ -99,9 +113,14 @@ export default function RainfallComparisonDashboard() {
   const [locations, setLocations] = useState<any[]>([])
   const [selectedLocation, setSelectedLocation] = useState<string>("")
   const [comparisonData, setComparisonData] = useState<ComparisonData[]>([])
-  const [rawBmkgData, setRawBmkgData] = useState<RawBmkgData[]>([])
-  const [rawOpenMeteoData, setRawOpenMeteoData] = useState<RawOpenMeteoData[]>([])
-  const [stats, setStats] = useState<StatsSummary | null>(null)
+
+  // State untuk Statistik
+  const [historicalStats, setHistoricalStats] = useState<StatsSummary | null>(null)
+  const [forecastStats, setForecastStats] = useState<StatsSummary | null>(null)
+
+  // State Tab Aktif
+  const [activeTab, setActiveTab] = useState("historical")
+
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState({
@@ -113,12 +132,27 @@ export default function RainfallComparisonDashboard() {
     async function fetchLocations() {
       const baseUrl = window.location.origin
       try {
-        const response = await fetch(`${baseUrl}/api/history?action=getLocations`)
+        const response = await fetch(`${baseUrl}/api/forecasts/all-latest`)
         const data = await response.json()
-        if (data.success) {
-          setLocations(data.locations)
-          if (data.locations.length > 0) {
-            setSelectedLocation(data.locations[0].name)
+        if (data.success && data.data.length > 0) {
+          const pumpLocations = data.data.map((pump: any, index: number) => ({
+            id: `${pump.pumpName.replace(/\s+/g, "-")}-${index}`,
+            name: pump.pumpName,
+            lat: pump.pumpLat,
+            lng: pump.pumpLng,
+          }))
+          setLocations(pumpLocations)
+          if (pumpLocations.length > 0) {
+            setSelectedLocation(pumpLocations[0].name)
+          }
+        } else {
+          const historyResponse = await fetch(`${baseUrl}/api/history?action=getLocations`)
+          const historyData = await historyResponse.json()
+          if (historyData.success) {
+            setLocations(historyData.locations)
+            if (historyData.locations.length > 0) {
+              setSelectedLocation(historyData.locations[0].name)
+            }
           }
         }
       } catch (error) {
@@ -137,9 +171,8 @@ export default function RainfallComparisonDashboard() {
     setIsLoading(true)
     setError(null)
     setComparisonData([])
-    setRawBmkgData([])
-    setRawOpenMeteoData([])
-    setStats(null)
+    setHistoricalStats(null)
+    setForecastStats(null)
 
     try {
       const location = locations.find((loc) => loc.name === selectedLocation)
@@ -147,19 +180,23 @@ export default function RainfallComparisonDashboard() {
         throw new Error("Lokasi tidak ditemukan")
       }
 
-      const [bmkgData, openMeteoData] = await Promise.all([
+      const [bmkgData, openMeteoData, forecastData] = await Promise.all([
         fetchBMKGData(location, dateRange.startDate, dateRange.endDate),
         fetchOpenMeteoData(location, dateRange.startDate, dateRange.endDate),
+        fetchForecastData(location.name, dateRange.startDate, dateRange.endDate),
       ])
 
-      setRawBmkgData(bmkgData)
-      setRawOpenMeteoData(openMeteoData)
-
-      const merged = mergeDataSources(bmkgData, openMeteoData, selectedLocation)
+      const merged = mergeDataSources(bmkgData, openMeteoData, forecastData, selectedLocation)
       setComparisonData(merged)
 
-      const calculatedStats = calculateStatistics(merged)
-      setStats(calculatedStats)
+      // Hitung Statistik Historis (BMKG vs Open-Meteo)
+      const hStats = calculateStatistics(merged, "bmkgRainfall", "openMeteoRainfall")
+      setHistoricalStats(hStats)
+
+      // Hitung Statistik Forecast (Open-Meteo History vs Forecast)
+      const fStats = calculateStatistics(merged, "openMeteoRainfall", "forecastRainfall")
+      setForecastStats(fStats)
+
     } catch (err) {
       setError((err as Error).message)
       console.error(err)
@@ -190,7 +227,7 @@ export default function RainfallComparisonDashboard() {
     const baseUrl = window.location.origin
     try {
       const response = await fetch(
-        `${baseUrl}/api/history?action=fetchData&lat=${location.lat}&lng=${location.lng}&startDate=${startDate}&endDate=${endDate}`,
+        `${baseUrl}/api/history?action=fetchData&lat=${location.lat}&lng=${location.lng}&startDate=${startDate}&endDate=${endDate}&locationName=${encodeURIComponent(location.name)}`,
       )
       const data = await response.json()
 
@@ -207,15 +244,36 @@ export default function RainfallComparisonDashboard() {
     }
   }
 
+  async function fetchForecastData(pumpName: string, startDate: string, endDate: string): Promise<RawForecastData | null> {
+    const baseUrl = window.location.origin
+    try {
+      const response = await fetch(
+        `${baseUrl}/api/forecasts/${encodeURIComponent(pumpName)}?startDate=${startDate}&endDate=${endDate}`,
+      )
+      const data = await response.json()
+      if (data.success && data.data) {
+        return data.data
+      }
+      return null
+    } catch (error) {
+      console.error("Gagal mengambil data Forecast:", error)
+      return null
+    }
+  }
+
   function mergeDataSources(
     bmkgData: RawBmkgData[],
     openMeteoData: RawOpenMeteoData[],
+    forecastData: RawForecastData | null,
     locationName: string,
   ): ComparisonData[] {
     const dataMap = new Map<string, Partial<ComparisonData>>()
 
     const normalizeToHourKey = (timestamp: string): string => {
+      if (!timestamp) return ""
       const date = new Date(timestamp)
+      if (isNaN(date.getTime())) return ""
+
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, "0")
       const day = String(date.getDate()).padStart(2, "0")
@@ -223,22 +281,44 @@ export default function RainfallComparisonDashboard() {
       return `${year}-${month}-${day}T${hour}`
     }
 
+    // 1. Map data Open-Meteo (History)
     const openMeteoHourMap = new Map<string, number>()
     openMeteoData.forEach((item) => {
       const hourKey = normalizeToHourKey(item.timestamp)
-      openMeteoHourMap.set(hourKey, Number.parseFloat((item.rainfall ?? 0).toFixed(2)))
+      if (hourKey) {
+        openMeteoHourMap.set(hourKey, Number.parseFloat((item.rainfall ?? 0).toFixed(2)))
+      }
     })
 
+    // 2. Map data Forecast
+    const forecastMap = new Map<string, number>()
+    if (forecastData) {
+      forecastData.hourly.time.forEach((time, index) => {
+        const hourKey = normalizeToHourKey(time)
+        if (hourKey) {
+          const precip = forecastData.hourly.precipitation?.[index] ?? forecastData.hourly.rain?.[index] ?? 0
+          forecastMap.set(hourKey, Number.parseFloat(precip.toFixed(2)))
+        }
+      })
+    }
+
+    // 3. Proses BMKG Data (History)
     bmkgData.forEach((item) => {
       const hourKey = normalizeToHourKey(item.timestamp)
+      if (!hourKey) return
+
       const openMeteoVal = openMeteoHourMap.get(hourKey)
+      const forecastVal = forecastMap.get(hourKey)
+
       const bmkgVal = Number.parseFloat((item.rainfall ?? 0).toFixed(2))
       const openMeteoRainfall = openMeteoVal !== undefined ? openMeteoVal : null
+      const forecastRainfall = forecastVal !== undefined ? forecastVal : null
 
       dataMap.set(item.timestamp, {
         timestamp: item.timestamp,
         bmkgRainfall: bmkgVal,
         openMeteoRainfall: openMeteoRainfall,
+        forecastRainfall: forecastRainfall,
         difference: openMeteoRainfall !== null ? Number.parseFloat((bmkgVal - openMeteoRainfall).toFixed(2)) : null,
         location: locationName,
         source: openMeteoRainfall !== null ? "both" : "bmkg",
@@ -248,18 +328,26 @@ export default function RainfallComparisonDashboard() {
       })
     })
 
+    // 4. Proses sisa Open-Meteo Data (History)
     openMeteoData.forEach((item) => {
       const hourKey = normalizeToHourKey(item.timestamp)
-      const openMeteoVal = Number.parseFloat((item.rainfall ?? 0).toFixed(2))
+      if (!hourKey) return
+
       const existingEntry = Array.from(dataMap.values()).find(
-        (entry) => normalizeToHourKey(entry.timestamp!) === hourKey,
+        (entry) => entry.timestamp && normalizeToHourKey(entry.timestamp) === hourKey
       )
 
       if (!existingEntry) {
+        const openMeteoVal = Number.parseFloat((item.rainfall ?? 0).toFixed(2))
+
+        const forecastVal = forecastMap.get(hourKey)
+        const forecastRainfall = forecastVal !== undefined ? forecastVal : null
+
         dataMap.set(item.timestamp, {
           timestamp: item.timestamp,
           bmkgRainfall: 0,
           openMeteoRainfall: openMeteoVal,
+          forecastRainfall: forecastRainfall,
           difference: Number.parseFloat((0 - openMeteoVal).toFixed(2)),
           location: locationName,
           source: "openmeteo",
@@ -267,30 +355,63 @@ export default function RainfallComparisonDashboard() {
       }
     })
 
+    // 5. Proses sisa Forecast Data
+    if (forecastData) {
+      forecastData.hourly.time.forEach((time, index) => {
+        const hourKey = normalizeToHourKey(time)
+        if (!hourKey) return
+
+        const existingEntry = Array.from(dataMap.values()).find(
+          (entry) => entry.timestamp && normalizeToHourKey(entry.timestamp) === hourKey
+        )
+
+        if (!existingEntry && !dataMap.has(time)) {
+          const precip = forecastData.hourly.precipitation?.[index] ?? forecastData.hourly.rain?.[index] ?? 0
+          const forecastVal = Number.parseFloat(precip.toFixed(2))
+
+          dataMap.set(time, {
+            timestamp: time,
+            bmkgRainfall: null,
+            openMeteoRainfall: null,
+            forecastRainfall: forecastVal,
+            difference: null,
+            location: locationName,
+            source: "forecast",
+          })
+        }
+      })
+    }
+
     const merged = Array.from(dataMap.values()) as ComparisonData[]
     return merged.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
   }
 
-    function formatDate(date: Date): string {
+  function formatDate(date: Date): string {
     const year = date.getFullYear()
     const month = (date.getMonth() + 1).toString().padStart(2, "0")
     const day = date.getDate().toString().padStart(2, "0")
     return `${year}-${month}-${day}`
   }
 
-  function calculateStatistics(data: ComparisonData[]): StatsSummary {
-    const pairedData = data.map((d) => ({
-      ...d,
-      bmkgRainfall: d.bmkgRainfall ?? 0,
-      openMeteoRainfall: d.openMeteoRainfall ?? 0,
-      difference: (d.bmkgRainfall ?? 0) - (d.openMeteoRainfall ?? 0),
-    }))
+  // Update: Fungsi Generik untuk menghitung statistik berdasarkan key dinamis
+  function calculateStatistics(data: ComparisonData[], key1: keyof ComparisonData, key2: keyof ComparisonData): StatsSummary {
+    const pairedData = data
+      .filter((d) => {
+        const val1 = d[key1];
+        const val2 = d[key2];
+        return typeof val1 === 'number' && typeof val2 === 'number';
+      })
+      .map((d) => ({
+        val1: d[key1] as number,
+        val2: d[key2] as number,
+        diff: (d[key1] as number) - (d[key2] as number),
+      }))
 
     if (pairedData.length === 0) {
       return {
         totalDataPoints: 0,
-        bmkgAvg: 0,
-        openMeteoAvg: 0,
+        avg1: 0,
+        avg2: 0,
         rmse: 0,
         mae: 0,
         bias: 0,
@@ -298,28 +419,28 @@ export default function RainfallComparisonDashboard() {
       }
     }
 
-    const bmkgValues = pairedData.map((d) => d.bmkgRainfall!)
-    const openMeteoValues = pairedData.map((d) => d.openMeteoRainfall!)
+    const values1 = pairedData.map((d) => d.val1)
+    const values2 = pairedData.map((d) => d.val2)
 
-    const bmkgAvg = bmkgValues.reduce((a, b) => a + b, 0) / pairedData.length
-    const openMeteoAvg = openMeteoValues.reduce((a, b) => a + b, 0) / pairedData.length
+    const avg1 = values1.reduce((a, b) => a + b, 0) / pairedData.length
+    const avg2 = values2.reduce((a, b) => a + b, 0) / pairedData.length
 
-    const mae = pairedData.reduce((sum, d) => sum + Math.abs(d.difference || 0), 0) / pairedData.length
-    const mse = pairedData.reduce((sum, d) => sum + Math.pow(d.difference || 0, 2), 0) / pairedData.length
+    const mae = pairedData.reduce((sum, d) => sum + Math.abs(d.diff), 0) / pairedData.length
+    const mse = pairedData.reduce((sum, d) => sum + Math.pow(d.diff, 2), 0) / pairedData.length
     const rmse = Math.sqrt(mse)
-    const bias = pairedData.reduce((sum, d) => sum + (d.difference || 0), 0) / pairedData.length
+    const bias = pairedData.reduce((sum, d) => sum + d.diff, 0) / pairedData.length
 
-    const bmkgDev = bmkgValues.map((v) => v - bmkgAvg)
-    const openMeteoDev = openMeteoValues.map((v) => v - openMeteoAvg)
-    const covariance = bmkgDev.reduce((sum, dev, i) => sum + dev * openMeteoDev[i], 0) / pairedData.length
-    const bmkgStd = Math.sqrt(bmkgDev.reduce((sum, dev) => sum + dev * dev, 0) / pairedData.length)
-    const openMeteoStd = Math.sqrt(openMeteoDev.reduce((sum, dev) => sum + dev * dev, 0) / pairedData.length)
-    const correlation = bmkgStd && openMeteoStd ? covariance / (bmkgStd * openMeteoStd) : 0
+    const dev1 = values1.map((v) => v - avg1)
+    const dev2 = values2.map((v) => v - avg2)
+    const covariance = dev1.reduce((sum, dev, i) => sum + dev * dev2[i], 0) / pairedData.length
+    const std1 = Math.sqrt(dev1.reduce((sum, dev) => sum + dev * dev, 0) / pairedData.length)
+    const std2 = Math.sqrt(dev2.reduce((sum, dev) => sum + dev * dev, 0) / pairedData.length)
+    const correlation = std1 && std2 ? covariance / (std1 * std2) : 0
 
     return {
       totalDataPoints: pairedData.length,
-      bmkgAvg: Number.parseFloat(bmkgAvg.toFixed(2)),
-      openMeteoAvg: Number.parseFloat(openMeteoAvg.toFixed(2)),
+      avg1: Number.parseFloat(avg1.toFixed(2)),
+      avg2: Number.parseFloat(avg2.toFixed(2)),
       rmse: Number.parseFloat(rmse.toFixed(2)),
       mae: Number.parseFloat(mae.toFixed(2)),
       bias: Number.parseFloat(bias.toFixed(2)),
@@ -330,9 +451,12 @@ export default function RainfallComparisonDashboard() {
   const handleDownloadCSV = () => {
     if (comparisonData.length === 0) return
 
-    const headers = "Timestamp,BMKG (mm/h),Open-Meteo (mm/h),Location"
+    const headers = "Timestamp,BMKG (mm/h),Open-Meteo (mm/h),Forecast (mm/h),Location"
     const rows = comparisonData.map(
-      (d) => `${formatTimestampForCSV(d.timestamp)},${d.bmkgRainfall ?? 0},${d.openMeteoRainfall ?? 0},${d.location}`,
+      (d) =>
+        `${formatTimestampForCSV(d.timestamp)},${d.bmkgRainfall ?? 0},${
+          d.openMeteoRainfall ?? 0
+        },${d.forecastRainfall ?? 0},${d.location}`,
     )
     const csvContent = `data:text/csv;charset=utf-8,${headers}\n${rows.join("\n")}`
 
@@ -342,35 +466,13 @@ export default function RainfallComparisonDashboard() {
     link.click()
   }
 
-  const combinedChartData = useMemo(() => {
-    if (rawOpenMeteoData.length === 0 && rawBmkgData.length === 0) return []
+  const historicalChartData = useMemo(() => {
+    return comparisonData.filter(d => d.bmkgRainfall !== null || d.openMeteoRainfall !== null)
+  }, [comparisonData])
 
-    const normalizeToHourKey = (timestamp: string): string => {
-      const date = new Date(timestamp)
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T${String(date.getHours()).padStart(2, "0")}`
-    }
-
-    const bmkgMap = new Map<string, RawBmkgData>()
-    rawBmkgData.forEach((item) => {
-      const hourKey = normalizeToHourKey(item.timestamp)
-      bmkgMap.set(hourKey, item)
-    })
-
-    return rawOpenMeteoData.map((openMeteoPoint) => {
-      const hourKey = normalizeToHourKey(openMeteoPoint.timestamp)
-      const bmkgData = bmkgMap.get(hourKey)
-
-      return {
-        time: formatDateTime(openMeteoPoint.timestamp),
-        openMeteoRainfall: openMeteoPoint.rainfall,
-        bmkgRainfall: bmkgData?.rainfall ?? 0,
-        bmkgDataCount: bmkgData?.dataCount ?? 0,
-        minValue: bmkgData?.minValue ?? 0,
-        maxValue: bmkgData?.maxValue ?? 0,
-        timestamp: openMeteoPoint.timestamp,
-      }
-    })
-  }, [rawBmkgData, rawOpenMeteoData])
+  const forecastChartData = useMemo(() => {
+    return comparisonData.filter(d => d.openMeteoRainfall !== null || d.forecastRainfall !== null)
+  }, [comparisonData])
 
   const selectedLoc = locations.find((loc) => loc.name === selectedLocation)
 
@@ -381,6 +483,15 @@ export default function RainfallComparisonDashboard() {
     }
   }
 
+  // Helper untuk konten Card Statistik Dinamis
+  const currentStats = activeTab === "historical" ? historicalStats : forecastStats
+  const statsTitle = activeTab === "historical"
+    ? "Statistik Perbandingan Historis (BMKG vs Open-Meteo)"
+    : "Statistik Evaluasi Forecast (History vs Forecast)"
+
+  const labelAVG1 = activeTab === "historical" ? "Rata-rata BMKG" : "Rata-rata O-M (History)"
+  const labelAVG2 = activeTab === "historical" ? "Rata-rata O-M" : "Rata-rata Forecast"
+
   return (
     <div className="min-h-screen w-full bg-white p-4 md:p-8">
       <div className="space-y-8 max-w-7xl mx-auto">
@@ -388,7 +499,7 @@ export default function RainfallComparisonDashboard() {
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-black">Perbandingan Curah Hujan</h1>
           </div>
-          <p className="text-gray-700 text-lg">Analisis data BMKG Radar vs Open-Meteo</p>
+          <p className="text-gray-700 text-lg">Analisis Data Historis (BMKG Radar vs Open-Meteo) dan Prakiraan (Forecast)</p>
         </div>
 
         <Card className="bg-white border-gray-300 shadow-md hover:shadow-lg transition-shadow">
@@ -505,70 +616,177 @@ export default function RainfallComparisonDashboard() {
           </CardContent>
         </Card>
 
-        {comparisonData.length > 0 && (
+        {/* --- Card Statistik Dinamis --- */}
+        {currentStats && currentStats.totalDataPoints > 0 && (
           <Card className="bg-white border-gray-300 shadow-md overflow-hidden mt-8">
             <CardHeader className="pb-4 border-b border-gray-200">
-              <CardTitle className="text-gray-900 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-black" />
-                Grafik Perbandingan Curah Hujan
-              </CardTitle>
-              <CardDescription className="text-gray-600 mt-3 space-y-1">
-                <p className="text-xs text-gray-600">
-                  Stasiun: <strong>{selectedLocation}</strong> | Periode: <strong>{dateRange.startDate}</strong> s/d{" "}
-                  <strong>{dateRange.endDate}</strong>
-                </p>
+              <CardTitle className="text-gray-900">{statsTitle}</CardTitle>
+              <CardDescription className="text-gray-600">
+                Statistik dihitung berdasarkan data yang tumpang tindih (overlap) pada rentang tanggal yang dipilih.
               </CardDescription>
             </CardHeader>
-            <CardContent className="h-[500px] pt-6">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={comparisonData} margin={{ top: 5, right: 30, left: 20, bottom: 80 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis
-                    dataKey="timestamp"
-                    tickFormatter={formatDateTime}
-                    fontSize={11}
-                    angle={-45}
-                    textAnchor="end"
-                    interval={Math.max(0, Math.floor(comparisonData.length / 24))}
-                    stroke="#6b7280"
-                  />
-                  <YAxis
-                    label={{
-                      value: "Laju Hujan (mm/h)",
-                      angle: -90,
-                      position: "insideLeft",
-                      style: { textAnchor: "middle", fill: "#374151" },
-                    }}
-                    fontSize={11}
-                    stroke="#6b7280"
-                  />
-                  <RechartsTooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: "10px" }} />
-                  <Line
-                    type="monotone"
-                    dataKey="bmkgRainfall"
-                    name="BMKG"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    dot={false}
-                    connectNulls={true}
-                    isAnimationActive={true}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="openMeteoRainfall"
-                    name="Open-Meteo"
-                    stroke="#f59e0b"
-                    strokeWidth={3}
-                    dot={false}
-                    connectNulls={true}
-                    isAnimationActive={true}
-                  />
-                  <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />
-                </LineChart>
-              </ResponsiveContainer>
+            <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {[
+                { label: "Total Data", value: currentStats.totalDataPoints },
+                { label: labelAVG1, value: `${currentStats.avg1} mm/h` },
+                { label: labelAVG2, value: `${currentStats.avg2} mm/h` },
+                { label: "RMSE", value: `${currentStats.rmse} mm/h` },
+                { label: "MAE", value: `${currentStats.mae} mm/h` },
+                { label: "Korelasi", value: currentStats.correlation },
+              ].map((stat) => (
+                <div key={stat.label} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-xs font-medium text-gray-600">{stat.label}</p>
+                  <p className="text-xl font-bold text-black">{stat.value}</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
+        )}
+
+        {comparisonData.length > 0 && (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-8">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-100 border border-gray-300">
+              <TabsTrigger value="historical" className="data-[state=active]:bg-black data-[state=active]:text-white">
+                Perbandingan Historis
+              </TabsTrigger>
+              <TabsTrigger value="forecast" className="data-[state=active]:bg-black data-[state=active]:text-white">
+                Perbandingan Forecast
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="historical">
+              <Card className="bg-white border-gray-300 shadow-md overflow-hidden mt-2">
+                <CardHeader className="pb-4 border-b border-gray-200">
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-black" />
+                    Grafik Perbandingan Historis
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 mt-3 space-y-1">
+                    <p>BMKG (History) vs Open-Meteo (History)</p>
+                    <p className="text-xs text-gray-600">
+                      Stasiun: <strong>{selectedLocation}</strong> | Periode: <strong>{dateRange.startDate}</strong> s/d{" "}
+                      <strong>{dateRange.endDate}</strong>
+                    </p>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-[500px] pt-6">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={historicalChartData} margin={{ top: 5, right: 30, left: 20, bottom: 80 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="timestamp"
+                        tickFormatter={formatDateTime}
+                        fontSize={11}
+                        angle={-45}
+                        textAnchor="end"
+                        interval={Math.max(0, Math.floor(historicalChartData.length / 24))}
+                        stroke="#6b7280"
+                      />
+                      <YAxis
+                        label={{
+                          value: "Laju Hujan (mm/h)",
+                          angle: -90,
+                          position: "insideLeft",
+                          style: { textAnchor: "middle", fill: "#374151" },
+                        }}
+                        fontSize={11}
+                        stroke="#6b7280"
+                      />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: "10px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="bmkgRainfall"
+                        name="BMKG (History)"
+                        stroke="#3b82f6"
+                        strokeWidth={3}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={true}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="openMeteoRainfall"
+                        name="Open-Meteo (History)"
+                        stroke="#f59e0b"
+                        strokeWidth={3}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={true}
+                      />
+                      <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="forecast">
+              <Card className="bg-white border-gray-300 shadow-md overflow-hidden mt-2">
+                <CardHeader className="pb-4 border-b border-gray-200">
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-black" />
+                    Grafik Perbandingan Forecast
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 mt-3 space-y-1">
+                    <p>Open-Meteo (History) vs Open-Meteo (Forecast)</p>
+                     <p className="text-xs text-gray-600">
+                      Stasiun: <strong>{selectedLocation}</strong> | Data forecast ditampilkan 16 hari ke depan.
+                    </p>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-[500px] pt-6">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={forecastChartData} margin={{ top: 5, right: 30, left: 20, bottom: 80 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="timestamp"
+                        tickFormatter={formatDateTime}
+                        fontSize={11}
+                        angle={-45}
+                        textAnchor="end"
+                        interval={Math.max(0, Math.floor(forecastChartData.length / 24))}
+                        stroke="#6b7280"
+                      />
+                      <YAxis
+                        label={{
+                          value: "Laju Hujan (mm/h)",
+                          angle: -90,
+                          position: "insideLeft",
+                          style: { textAnchor: "middle", fill: "#374151" },
+                        }}
+                        fontSize={11}
+                        stroke="#6b7280"
+                      />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: "10px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="openMeteoRainfall"
+                        name="Open-Meteo (History)"
+                        stroke="#f59e0b"
+                        strokeWidth={3}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={true}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="forecastRainfall"
+                        name="Open-Meteo (Forecast)"
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={true}
+                      />
+                      <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         )}
 
         {isLoading && (
@@ -577,7 +795,7 @@ export default function RainfallComparisonDashboard() {
               <Loader2 className="h-16 w-16 text-black animate-spin" />
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">Memuat data perbandingan...</h3>
-                <p className="text-sm text-gray-600 mt-2">Mengambil data dari BMKG dan Open-Meteo</p>
+                <p className="text-sm text-gray-600 mt-2">Mengambil data dari BMKG, Open-Meteo History, dan Open-Meteo Forecast</p>
               </div>
             </div>
           </Card>
@@ -600,5 +818,3 @@ export default function RainfallComparisonDashboard() {
     </div>
   )
 }
-
-

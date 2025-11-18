@@ -243,9 +243,23 @@ async function saveToMongoDB(
 
       await collection.bulkWrite(bulkOps);
 
-      // Create indexes
-      await collection.createIndex({ date: 1 }, { unique: true });
-      await collection.createIndex({ updatedAt: -1 });
+      // --- ERROR FIX START ---
+      // Create indexes with try-catch to handle conflicts
+      try {
+        await collection.createIndex({ date: 1 }, { unique: true });
+      } catch (error: any) {
+        // Ignore code 86 (IndexKeySpecsConflict) which happens if index exists with different options
+        if (error.code !== 86) {
+          console.warn(`Warning: Could not create unique index on 'date' for ${collectionName}:`, error.message);
+        }
+      }
+
+      try {
+        await collection.createIndex({ updatedAt: -1 });
+      } catch (error) {
+        console.warn(`Warning: Could not create index on 'updatedAt' for ${collectionName}:`, error);
+      }
+      // --- ERROR FIX END ---
 
       return true;
     }

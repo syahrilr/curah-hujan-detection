@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getHardcodedPumpLocations } from '@/lib/kml-parser'
 
-// Dynamic route - disable caching
 export const dynamic = 'force-dynamic'
 
 interface ForecastDocument {
@@ -22,10 +21,8 @@ interface ForecastDocument {
 
 export async function GET() {
   try {
-    // Import MongoDB client
     const clientPromise = (await import('@/lib/mongodb')).default
     const { getForecastCollection } = await import('@/lib/forecast')
-
     const pumpLocations = getHardcodedPumpLocations()
     const forecasts: ForecastDocument[] = []
 
@@ -56,7 +53,6 @@ export async function GET() {
         'Content-Type': 'application/json',
       }
     })
-
   } catch (error) {
     console.error('Error in all-latest API:', error)
     return NextResponse.json(
