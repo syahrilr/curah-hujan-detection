@@ -40,11 +40,15 @@ import {
   Monitor,
   Radar,
   Settings,
-  Cloud, // Icon baru ditambahkan
+  CloudRain,
+  Cloud,
 } from "lucide-react";
-// Impor komponen tab baru
+
+// Import komponen tab baru
 import RainfallHistoryTab from "./history/rainfall-historycal-tab";
 import ForecastTab from "./forecast/forecast-tab";
+import TMADashboard from "./jakarta/tma-dashboard";
+import CurahHujanDashboard from "./jakarta/curah-hujan-dashboard";
 
 interface DetectedLocation {
   lat: number;
@@ -155,13 +159,10 @@ export default function MonitoringDashboard() {
       if (data.success) {
         setSummary(data.summary);
         setResults(data.results);
-
-        // ✅ NEW: Include screenshot in captured data
         setCapturedData({
           ...data.capturedData,
-          screenshot: data.capturedData?.screenshot, // From API response
+          screenshot: data.capturedData?.screenshot,
         });
-
         setLastUpdate(new Date());
       }
     } catch (error) {
@@ -211,31 +212,38 @@ export default function MonitoringDashboard() {
         </div>
 
         <Tabs defaultValue="monitor" className="space-y-6">
-          {/* PERBARUI: Tambah 1 kolom (grid-cols-4) untuk tab baru */}
-          <TabsList className="grid w-full grid-cols-5 lg:w-[750px]">
-            <TabsTrigger value="monitor">
-              <Monitor className="size-4 mr-2" />
+          <TabsList className="grid w-full grid-cols-7 lg:w-[950px]">
+            <TabsTrigger value="monitor" className="gap-2">
+              <Monitor className="h-4 w-4" />
               Monitor
             </TabsTrigger>
-            <TabsTrigger value="radar">
-              <Radar className="size-4 mr-2" />
+            <TabsTrigger value="radar" className="gap-2">
+              <Radar className="h-4 w-4" />
               Radar Image
             </TabsTrigger>
-            <TabsTrigger value="history">
-              <BarChart className="h-4 w-4 mr-2" />
+            <TabsTrigger value="tma" className="gap-2">
+              <Droplets className="h-4 w-4" />
+              TMA
+            </TabsTrigger>
+            <TabsTrigger value="curah-hujan" className="gap-2">
+              <CloudRain className="h-4 w-4" />
+              Curah Hujan
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <BarChart className="h-4 w-4" />
               History
             </TabsTrigger>
-            {/* NEW TAB */}
-            <TabsTrigger value="forecast">
-              <Cloud className="h-4 w-4 mr-2" />
+            <TabsTrigger value="forecast" className="gap-2">
+              <Cloud className="h-4 w-4" />
               Forecast
             </TabsTrigger>
-            <TabsTrigger value="settings">
-              <Settings className="size-4 mr-2" />
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="h-4 w-4" />
               Settings
             </TabsTrigger>
           </TabsList>
 
+          {/* MONITOR TAB */}
           <TabsContent value="monitor" className="space-y-6">
             {/* Summary Cards */}
             {summary && (
@@ -449,6 +457,8 @@ export default function MonitoringDashboard() {
             )}
           </TabsContent>
 
+          {/* RADAR IMAGE TAB */}
+          {/* RADAR IMAGE TAB */}
           <TabsContent value="radar" className="space-y-6">
             {capturedData && capturedData.radarImage ? (
               <div className="space-y-6">
@@ -522,7 +532,6 @@ export default function MonitoringDashboard() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            // Download screenshot
                             const link = document.createElement("a");
                             link.href = capturedData.screenshot!;
                             link.download = `radar-screenshot-${Date.now()}.png`;
@@ -591,7 +600,7 @@ export default function MonitoringDashboard() {
                       <CardContent>
                         <div className="space-y-3">
                           {capturedData.detectedLocations
-                            .sort((a, b) => b.rainRate - a.rainRate) // Sort by rain rate
+                            .sort((a, b) => b.rainRate - a.rainRate)
                             .map((location, index) => (
                               <div
                                 key={index}
@@ -782,14 +791,27 @@ export default function MonitoringDashboard() {
             )}
           </TabsContent>
 
-          {/* TAMBAH: Konten untuk Tab History Baru */}
+          {/* TMA TAB - NEW */}
+          <TabsContent value="tma" className="space-y-6">
+            <TMADashboard />
+          </TabsContent>
+
+          {/* CURAH HUJAN TAB - NEW */}
+          <TabsContent value="curah-hujan" className="space-y-6">
+            <CurahHujanDashboard />
+          </TabsContent>
+
+          {/* HISTORY TAB - NEW */}
           <TabsContent value="history" className="space-y-6">
             <RainfallHistoryTab />
           </TabsContent>
+
+          {/* FORECAST TAB - NEW */}
           <TabsContent value="forecast" className="space-y-6">
             <ForecastTab />
           </TabsContent>
 
+          {/* SETTINGS TAB */}
           <TabsContent value="settings" className="space-y-6">
             {/* Cron Settings */}
             <Card>
@@ -943,7 +965,7 @@ export default function MonitoringDashboard() {
             </div>
             <div className="p-4">
               <img
-                src={capturedData.radarImage || "/placeholder.svg"}
+                src={capturedData.radarImage}
                 alt="Radar Image Full Size"
                 className="w-full h-auto"
               />

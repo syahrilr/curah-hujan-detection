@@ -21,7 +21,7 @@ interface ForecastDocument {
 
 export async function GET() {
   try {
-    const clientPromise = (await import('@/lib/mongodb')).default
+    const clientPromise = (await import('@/lib/mongodb'))
     const { getForecastCollection } = await import('@/lib/forecast')
     const pumpLocations = getHardcodedPumpLocations()
     const forecasts: ForecastDocument[] = []

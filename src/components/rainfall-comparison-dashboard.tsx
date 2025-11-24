@@ -589,7 +589,7 @@ export default function RainfallComparisonDashboard() {
               <Button
                 onClick={handleFetchComparison}
                 disabled={isLoading || !selectedLocation}
-                className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
+                className="w-full sm:w-auto font-semibold shadow-md hover:shadow-lg transition-shadow"
               >
                 {isLoading ? (
                   <>
@@ -646,10 +646,10 @@ export default function RainfallComparisonDashboard() {
         {comparisonData.length > 0 && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-8">
             <TabsList className="grid w-full grid-cols-2 bg-gray-100 border border-gray-300">
-              <TabsTrigger value="historical" className="data-[state=active]:bg-black data-[state=active]:text-white">
+              <TabsTrigger value="historical" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                 Perbandingan Historis
               </TabsTrigger>
-              <TabsTrigger value="forecast" className="data-[state=active]:bg-black data-[state=active]:text-white">
+              <TabsTrigger value="forecast" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                 Perbandingan Forecast
               </TabsTrigger>
             </TabsList>
