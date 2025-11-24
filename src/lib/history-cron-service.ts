@@ -31,6 +31,10 @@ if (MONGODB_ENABLED) {
 /**
  * Fungsi untuk menyimpan data ke MongoDB dengan collection terpisah per lokasi
  */
+/**
+ * Fungsi untuk menyimpan data ke MongoDB dengan collection terpisah per lokasi
+ * FIXED VERSION - Mengatasi conflict createdAt
+ */
 async function saveToMongoDB(
   locationName: string,
   latitude: number,
@@ -86,15 +90,18 @@ async function saveToMongoDB(
       });
     });
 
-    // Convert Map ke Array dan tambahkan metadata
+    // Convert Map ke Array
     const dailyDocuments = [];
+    const now = new Date();
+
     for (const [date, data] of dataByDate) {
       dailyDocuments.push({
-        ...data,
+        date: data.date,
+        location: data.location,
+        hourly_data: data.hourly_data,
         timezone: historyData.timezone,
         hourly_units: historyData.hourly_units,
-        updatedAt: new Date(),
-        createdAt: new Date(),
+        updatedAt: now,
       });
     }
 
@@ -109,11 +116,21 @@ async function saveToMongoDB(
           },
           update: {
             $set: {
-              ...doc,
-              updatedAt: new Date(),
+              // Hanya set field yang boleh di-update
+              "location.name": doc.location.name,
+              hourly_data: doc.hourly_data,
+              timezone: doc.timezone,
+              hourly_units: doc.hourly_units,
+              updatedAt: doc.updatedAt,
             },
             $setOnInsert: {
-              createdAt: new Date(),
+              // Field yang hanya di-set saat insert pertama kali
+              date: doc.date,
+              "location.latitude": doc.location.latitude,
+              "location.longitude": doc.location.longitude,
+              "location.type": doc.location.type,
+              "location.coordinates": doc.location.coordinates,
+              createdAt: now,
             },
           },
           upsert: true,
@@ -122,22 +139,40 @@ async function saveToMongoDB(
 
       const result = await collection.bulkWrite(bulkOps);
 
-      // Buat index untuk optimasi query
-      await collection.createIndex({ date: 1 });
-      await collection.createIndex({ "location.coordinates": "2dsphere" });
-      await collection.createIndex({ updatedAt: -1 });
+      // Buat index untuk optimasi query (hanya sekali)
+      try {
+        await collection.createIndex({ date: 1 }, { background: true });
+        await collection.createIndex(
+          { "location.coordinates": "2dsphere" },
+          { background: true }
+        );
+        await collection.createIndex({ updatedAt: -1 }, { background: true });
+      } catch (indexError) {
+        // Index mungkin sudah ada, abaikan error
+        console.log("   ℹ️ Indexes already exist or error creating:", (indexError as Error).message);
+      }
+
+      console.log(
+        `   ✓ MongoDB: ${result.upsertedCount} inserted, ${result.modifiedCount} updated`
+      );
 
       return {
         saved: true,
         documentsCount: result.upsertedCount + result.modifiedCount,
         collection: collectionName,
+        inserted: result.upsertedCount,
+        updated: result.modifiedCount,
       };
     }
 
     return { saved: false, documentsCount: 0 };
   } catch (dbError) {
     console.error("   ❌ MongoDB error:", (dbError as Error).message);
-    return { saved: false, documentsCount: 0, error: (dbError as Error).message };
+    return {
+      saved: false,
+      documentsCount: 0,
+      error: (dbError as Error).message,
+    };
   } finally {
     try {
       await client.close();
@@ -146,6 +181,7 @@ async function saveToMongoDB(
     }
   }
 }
+
 
 /**
  * Fungsi utama untuk mengambil dan menyimpan data history semua lokasi
