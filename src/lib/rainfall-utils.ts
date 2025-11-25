@@ -1,68 +1,54 @@
-export function getIntensityColor(intensity: string): string {
-  switch (intensity) {
-    case 'No Rain': return 'text-gray-400';
-    case 'Light Rain': return 'text-blue-400';
-    case 'Moderate Rain': return 'text-yellow-500';
-    case 'Heavy Rain': return 'text-orange-500';
-    case 'Very Heavy Rain': return 'text-red-500';
-    default: return 'text-gray-400';
-  }
-}
+// src/lib/rainfall-utils.ts
 
-export function getIntensityBadgeVariant(intensity: string): 'default' | 'secondary' | 'destructive' {
-  switch (intensity) {
-    case 'Heavy Rain':
-    case 'Very Heavy Rain':
-      return 'destructive';
-    case 'Moderate Rain':
-      return 'default';
-    default:
-      return 'secondary';
-  }
-}
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
-export function formatRainRate(rate: number): string {
-  return rate.toFixed(2);
-}
-
-export function formatConfidence(confidence: number): string {
-  return `${(confidence * 100).toFixed(1)}%`;
-}
-
-export function formatTimestamp(timestamp: string | undefined): string {
-  if (!timestamp) return 'N/A';
-
+export const formatTimestamp = (timestamp?: string) => {
+  if (!timestamp) return '-';
   try {
-    const date = new Date(timestamp);
-    return date.toLocaleString('id-ID', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    });
-  } catch {
+    return format(new Date(timestamp), 'dd MMMM yyyy, HH:mm', { locale: id });
+  } catch (e) {
     return timestamp;
   }
-}
+};
 
-export function getPredictionTime(baseTime: string, minutesAhead: number): string {
+export const getPredictionTime = (baseTimestamp: string, minutes: number) => {
+  if (!baseTimestamp) return `+${minutes} m`;
   try {
-    const date = new Date(baseTime);
-    date.setMinutes(date.getMinutes() + minutesAhead);
-    return date.toLocaleString('id-ID', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    });
-  } catch {
-    return `+${minutesAhead} min`;
+    const date = new Date(baseTimestamp);
+    const future = new Date(date.getTime() + minutes * 60000);
+    return format(future, 'HH:mm', { locale: id });
+  } catch (e) {
+    return `+${minutes} m`;
   }
-}
+};
 
-export function downloadFile(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
+export const formatRainRate = (rate: number) => {
+  return rate.toFixed(1);
+};
+
+export const formatConfidence = (conf: number) => {
+  return `${(conf * 100).toFixed(0)}%`;
+};
+
+export const getIntensityBadgeVariant = (intensity: string) => {
+  switch (intensity) {
+    case 'Very Heavy Rain': return 'destructive';
+    case 'Heavy Rain': return 'destructive';
+    case 'Moderate Rain': return 'default'; // atau 'warning' jika ada
+    case 'Light Rain': return 'secondary';
+    default: return 'outline';
+  }
+};
+
+// Helper untuk download file di browser
+export const downloadFile = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
