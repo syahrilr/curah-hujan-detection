@@ -1,9 +1,12 @@
 import { initializeHistoryCronJob } from "./init-history-cron";
 import { initializeForecastCronJob } from "./init-forecast-cron";
+import { initializeTMACronJob } from "./init-tma-cron";
+import { initializeRainfallCronJob } from "./init-curah-hujan-cron";
 
 let isStartupComplete = false;
 
 export function initializeServerStartup() {
+  // Mencegah inisialisasi ganda (karena HMR Next.js di development)
   if (isStartupComplete) {
     return;
   }
@@ -12,20 +15,25 @@ export function initializeServerStartup() {
   console.log("🚀 SERVER STARTUP INITIALIZATION");
   console.log("=".repeat(60));
 
-  // Initialize rainfall monitoring cron (real-time alerts)
-  console.log("\n📡 1. Rainfall Monitoring Cron Job:");
+  // 1. Initialize History Cron (Daily Backup)
+  console.log("\n💾 1. History Data Collection Cron Job:");
   console.log("─".repeat(60));
-  // initializeCronJob(); // Your existing monitor cron
+  if (typeof initializeHistoryCronJob === 'function') initializeHistoryCronJob();
 
-  // Initialize history data collection cron (daily backup)
-  console.log("\n💾 2. History Data Collection Cron Job:");
+  // 2. Initialize Forecast Cron (Weather Prediction)
+  console.log("\n🌦️ 2. Forecast Data Collection Cron Job:");
   console.log("─".repeat(60));
-  initializeHistoryCronJob();
+  if (typeof initializeForecastCronJob === 'function') initializeForecastCronJob();
 
-  // Initialize forecast data collection cron (every 14 days)
-  console.log("\n🌦️ 3. Forecast Data Collection Cron Job:");
+  // 3. Initialize TMA Cron (Realtime Water Level)
+  console.log("\n🌊 3. TMA Monitoring Cron Job:");
   console.log("─".repeat(60));
-  initializeForecastCronJob();
+  initializeTMACronJob();
+
+  // 4. Initialize Rainfall Cron (Realtime Rainfall)
+  console.log("\n🌧️ 4. Curah Hujan Monitoring Cron Job:");
+  console.log("─".repeat(60));
+  initializeRainfallCronJob();
 
   console.log("=".repeat(60));
   console.log("✅ SERVER STARTUP COMPLETE");
@@ -34,9 +42,6 @@ export function initializeServerStartup() {
   isStartupComplete = true;
 }
 
-/**
- * Get startup status
- */
 export function isStartupInitialized() {
   return isStartupComplete;
 }

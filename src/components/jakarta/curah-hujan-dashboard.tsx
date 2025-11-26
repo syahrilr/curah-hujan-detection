@@ -21,18 +21,18 @@ import { id } from 'date-fns/locale';
 
 interface CurahHujanData {
   _id: string;
-  id: string;
+  id?: string;
   nama_pos: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   ch: number;
   status: string;
-  waktu_ch: string;
-  last_update: string;
-  fetched_at: string;
+  waktu_ch?: string; // Bisa dari API luar
+  created_at?: string; // Dari DB kita
+  fetched_at?: string; // Dari DB kita
 }
 
-// Helper untuk warna custom tanpa melanggar tipe Badge
+// Helper untuk warna custom
 const getCustomBadgeStyle = (ch: number) => {
   const val = ch || 0;
   if (val === 0) return 'border-gray-400 text-gray-600';
@@ -42,15 +42,11 @@ const getCustomBadgeStyle = (ch: number) => {
   return 'bg-red-100 text-red-800 hover:bg-red-100/80 border-red-200';
 };
 
-// Helper untuk format tanggal aman
 const safeFormatDate = (dateString: string | null | undefined) => {
   if (!dateString) return '-';
-
   try {
     const date = new Date(dateString);
-    if (!isValid(date)) {
-      return dateString;
-    }
+    if (!isValid(date)) return dateString;
     return format(date, 'dd MMM yyyy, HH:mm', { locale: id });
   } catch (e) {
     return dateString || '-';
@@ -66,12 +62,20 @@ export default function CurahHujanDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/curah-hujan');
+      // UBAH DISINI: Panggil API Database lokal
+      const response = await fetch('/api/curah-hujan/db');
       const result = await response.json();
+
       if (result.success) {
-        const sortedData = result.data.sort((a: CurahHujanData, b: CurahHujanData) => (b.ch || 0) - (a.ch || 0));
-        setData(sortedData);
-        setLastUpdate(new Date());
+        // Data sudah disortir oleh API (ch descending)
+        setData(result.data);
+
+        // Set Last Update dari respons API jika ada
+        if (result.lastUpdate) {
+            setLastUpdate(new Date(result.lastUpdate));
+        } else {
+            setLastUpdate(new Date());
+        }
       }
     } catch (error) {
       console.error('Error fetching Curah Hujan data:', error);
@@ -82,7 +86,8 @@ export default function CurahHujanDashboard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 300000);
+    // Refresh tiap 1 menit karena Cron Job jalan tiap 5 menit
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -220,7 +225,7 @@ export default function CurahHujanDashboard() {
         </Card>
       </div>
 
-      {/* Line Chart Section - FULL WIDTH (No Scroll) */}
+      {/* Line Chart Section */}
       <Card className="p-4 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -232,7 +237,6 @@ export default function CurahHujanDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Removed overflow-x-auto and fixed width calculation */}
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
@@ -257,7 +261,7 @@ export default function CurahHujanDashboard() {
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', background: '#ffffff' }}
                   labelStyle={{ color: '#111827', fontWeight: 'bold' }}
                   itemStyle={{ color: '#0ea5e9' }}
-                  formatter={(value: number, name: string, props: any) => [`${value} mm`, name]}
+                  formatter={(value: number, name: string) => [`${value} mm`, name]}
                 />
                 <Legend wrapperStyle={{ paddingTop: '0px' }} />
                 <Line
@@ -285,7 +289,6 @@ export default function CurahHujanDashboard() {
         </div>
 
         {viewMode === 'grid' ? (
-            /* Grid View */
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {data.map((item) => (
                 <Card key={item._id} className={`shadow-sm transition-all duration-200 hover:shadow-md border-l-4 ${
@@ -334,14 +337,14 @@ export default function CurahHujanDashboard() {
                     </div>
 
                     <p className="pt-2 text-xs text-muted-foreground border-t">
-                        Update: {safeFormatDate(item.waktu_ch)}
+                        {/* Gunakan created_at dari DB, fallback ke fetched_at atau waktu_ch */}
+                        Update: {safeFormatDate(item.created_at || item.fetched_at || item.waktu_ch)}
                     </p>
                 </CardContent>
                 </Card>
             ))}
             </div>
         ) : (
-            /* Table View */
             <div className="rounded-md border bg-card text-card-foreground shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
@@ -368,7 +371,7 @@ export default function CurahHujanDashboard() {
                                         </Badge>
                                     </td>
                                     <td className="px-6 py-4 text-muted-foreground">
-                                        {safeFormatDate(item.waktu_ch)}
+                                        {safeFormatDate(item.created_at || item.fetched_at || item.waktu_ch)}
                                     </td>
                                 </tr>
                             ))}

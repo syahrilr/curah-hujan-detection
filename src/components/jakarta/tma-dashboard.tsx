@@ -21,22 +21,21 @@ import { id } from 'date-fns/locale';
 
 interface TMAData {
   _id: string;
-  id: string;
+  id?: string;
   nama_pos: string;
-  elevasi: number;
-  latitude: number;
-  longitude: number;
-  siaga1: number;
-  siaga2: number;
-  siaga3: number;
+  elevasi?: number;
+  latitude?: number;
+  longitude?: number;
+  siaga1?: number;
+  siaga2?: number;
+  siaga3?: number;
   tma: number;
   status: string;
-  waktu_tma: string;
-  last_update: string;
-  fetched_at: string;
+  waktu_tma?: string;
+  created_at?: string; // Dari DB kita
+  fetched_at?: string; // Dari DB kita
 }
 
-// Helper untuk custom badge style
 const getStatusBadgeStyle = (status: string) => {
   const statusLower = status?.toLowerCase();
   if (statusLower === 'siaga1') return 'bg-red-100 text-red-800 hover:bg-red-100/80 border-red-200';
@@ -45,16 +44,11 @@ const getStatusBadgeStyle = (status: string) => {
   return 'bg-green-100 text-green-800 hover:bg-green-100/80 border-green-200';
 };
 
-// Helper untuk format tanggal aman
 const safeFormatDate = (dateString: string | null | undefined) => {
   if (!dateString) return '-';
-
   try {
     const date = new Date(dateString);
-    // Cek apakah tanggal valid
-    if (!isValid(date)) {
-      return dateString;
-    }
+    if (!isValid(date)) return dateString;
     return format(date, 'dd MMM yyyy, HH:mm', { locale: id });
   } catch (e) {
     return dateString || '-';
@@ -70,21 +64,29 @@ export default function TMADashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/tma');
+      // UBAH DISINI: Panggil API Database lokal
+      const response = await fetch('/api/tma/db');
       const result = await response.json();
+
       if (result.success) {
-        // Sort data untuk visualisasi yang lebih baik
+        // Data sudah disortir oleh API (nama_pos asc)
+        // Kita sort ulang agar Siaga di atas (opsional, bisa dihandle API juga)
         const sortedData = result.data.sort((a: TMAData, b: TMAData) => {
           const statusOrder: { [key: string]: number } = { 'siaga1': 4, 'siaga2': 3, 'siaga3': 2, 'normal': 1 };
           const statusA = statusOrder[a.status?.toLowerCase()] || 0;
           const statusB = statusOrder[b.status?.toLowerCase()] || 0;
 
-          if (statusA !== statusB) return statusB - statusA;
-          return (b.tma || 0) - (a.tma || 0);
+          if (statusA !== statusB) return statusB - statusA; // Status lebih tinggi di atas
+          return (b.tma || 0) - (a.tma || 0); // TMA lebih tinggi di atas
         });
 
         setData(sortedData);
-        setLastUpdate(new Date());
+
+        if (result.lastUpdate) {
+            setLastUpdate(new Date(result.lastUpdate));
+        } else {
+            setLastUpdate(new Date());
+        }
       }
     } catch (error) {
       console.error('Error fetching TMA data:', error);
@@ -95,7 +97,7 @@ export default function TMADashboard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 300000);
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -178,6 +180,7 @@ export default function TMADashboard() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* ... (Card Summary sama persis, tidak berubah) ... */}
         <Card className="border-l-4 border-red-500 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Siaga 1</CardTitle>
@@ -223,7 +226,7 @@ export default function TMADashboard() {
         </Card>
       </div>
 
-      {/* Line Chart Section - FULL WIDTH (No Scroll) */}
+      {/* Line Chart Section */}
       <Card className="p-4 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -235,17 +238,13 @@ export default function TMADashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Removed overflow-x-auto and fixed width calculation */}
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={data}
-                margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
-              >
+              <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
                 <XAxis
                   dataKey="nama_pos"
-                  interval={0} // Paksa tampil semua label
+                  interval={0}
                   angle={-45}
                   textAnchor="end"
                   height={100}
@@ -260,13 +259,7 @@ export default function TMADashboard() {
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', background: '#ffffff' }}
                   labelStyle={{ color: '#111827', fontWeight: 'bold' }}
                   itemStyle={{ color: '#2563eb' }}
-                  formatter={(value: number, name: string, props: any) => {
-                    const itemData = props.payload;
-                    return [
-                      `${value} cm`,
-                      `${name} (${itemData.status})`,
-                    ];
-                  }}
+                  formatter={(value: number, name: string, props: any) => [`${value} cm`, `${name} (${props.payload.status})`]}
                 />
                 <Legend wrapperStyle={{ paddingTop: '0px' }} />
                 <Line
@@ -327,20 +320,21 @@ export default function TMADashboard() {
                     <div className="space-y-1.5 bg-muted/30 p-2 rounded text-xs">
                         <div className="flex justify-between">
                             <span>Siaga 1:</span>
-                            <span className="font-medium text-red-500">{item.siaga1}</span>
+                            <span className="font-medium text-red-500">{item.siaga1 || 0}</span>
                         </div>
                         <div className="flex justify-between">
                             <span>Siaga 2:</span>
-                            <span className="font-medium text-amber-500">{item.siaga2}</span>
+                            <span className="font-medium text-amber-500">{item.siaga2 || 0}</span>
                         </div>
                         <div className="flex justify-between">
                             <span>Siaga 3:</span>
-                            <span className="font-medium text-yellow-500">{item.siaga3}</span>
+                            <span className="font-medium text-yellow-500">{item.siaga3 || 0}</span>
                         </div>
                     </div>
 
                     <p className="pt-2 text-xs text-muted-foreground border-t">
-                    Update: {safeFormatDate(item.waktu_tma)}
+                    {/* Gunakan created_at dari DB, fallback ke fetched_at atau waktu_tma */}
+                    Update: {safeFormatDate(item.created_at || item.fetched_at || item.waktu_tma)}
                     </p>
                 </CardContent>
                 </Card>
@@ -375,12 +369,12 @@ export default function TMADashboard() {
                                         </Badge>
                                     </td>
                                     <td className="px-6 py-4 text-right text-xs text-muted-foreground font-mono">
-                                        <span className="text-red-500">{item.siaga1}</span> /
-                                        <span className="text-amber-500"> {item.siaga2}</span> /
-                                        <span className="text-yellow-500"> {item.siaga3}</span>
+                                        <span className="text-red-500">{item.siaga1 || 0}</span> /
+                                        <span className="text-amber-500"> {item.siaga2 || 0}</span> /
+                                        <span className="text-yellow-500"> {item.siaga3 || 0}</span>
                                     </td>
                                     <td className="px-6 py-4 text-muted-foreground">
-                                        {safeFormatDate(item.waktu_tma)}
+                                        {safeFormatDate(item.created_at || item.fetched_at || item.waktu_tma)}
                                     </td>
                                 </tr>
                             ))}
