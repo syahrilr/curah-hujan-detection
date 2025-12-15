@@ -2,6 +2,7 @@ import { initializeHistoryCronJob } from "./init-history-cron";
 import { initializeForecastCronJob } from "./init-forecast-cron";
 import { initializeTMACronJob } from "./init-tma-cron";
 import { initializeRainfallCronJob } from "./init-curah-hujan-cron";
+import { initializePompaSyncCronJob } from "./init-pompa-sync-cron";
 
 let isStartupComplete = false;
 
@@ -25,15 +26,9 @@ export function initializeServerStartup() {
   console.log("─".repeat(60));
   if (typeof initializeForecastCronJob === 'function') initializeForecastCronJob();
 
-  // 3. Initialize TMA Cron (Realtime Water Level)
-  console.log("\n🌊 3. TMA Monitoring Cron Job:");
+  console.log("\n🏗️ 3. Pompa Data Sync (Nearest Neighbor) Cron Job:");
   console.log("─".repeat(60));
-  initializeTMACronJob();
-
-  // 4. Initialize Rainfall Cron (Realtime Rainfall)
-  console.log("\n🌧️ 4. Curah Hujan Monitoring Cron Job:");
-  console.log("─".repeat(60));
-  initializeRainfallCronJob();
+  initializePompaSyncCronJob()
 
   console.log("=".repeat(60));
   console.log("✅ SERVER STARTUP COMPLETE");

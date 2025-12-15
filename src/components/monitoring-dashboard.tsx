@@ -49,6 +49,7 @@ import RainfallHistoryTab from "./history/rainfall-historycal-tab";
 import ForecastTab from "./forecast/forecast-tab";
 import TMADashboard from "./jakarta/tma-dashboard";
 import CurahHujanDashboard from "./jakarta/curah-hujan-dashboard";
+import PompaMonitorDashboard from "./jakarta/pompa-monitor-dashboard";
 
 interface DetectedLocation {
   lat: number;
@@ -221,14 +222,14 @@ export default function MonitoringDashboard() {
               <Radar className="h-4 w-4" />
               Radar Image
             </TabsTrigger>
-            <TabsTrigger value="tma" className="gap-2">
+            <TabsTrigger value="dsda" className="gap-2">
               <Droplets className="h-4 w-4" />
-              TMA
+              DSDA
             </TabsTrigger>
-            <TabsTrigger value="curah-hujan" className="gap-2">
+            {/* <TabsTrigger value="curah-hujan" className="gap-2">
               <CloudRain className="h-4 w-4" />
               Curah Hujan
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="history" className="gap-2">
               <BarChart className="h-4 w-4" />
               History
@@ -792,13 +793,13 @@ export default function MonitoringDashboard() {
           </TabsContent>
 
           {/* TMA TAB - NEW */}
-          <TabsContent value="tma" className="space-y-6">
+          {/* <TabsContent value="tma" className="space-y-6">
             <TMADashboard />
-          </TabsContent>
+          </TabsContent> */}
 
           {/* CURAH HUJAN TAB - NEW */}
-          <TabsContent value="curah-hujan" className="space-y-6">
-            <CurahHujanDashboard />
+          <TabsContent value="dsda" className="space-y-6">
+            <PompaMonitorDashboard />
           </TabsContent>
 
           {/* HISTORY TAB - NEW */}
