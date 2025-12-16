@@ -44,10 +44,10 @@ export async function GET(request: Request) {
         .project({
           _id: 0,
           nama_lokasi: 1,
-          ch_value: 1,      // Nilai CH
+          location_code: 1, // <-- TAMBAHAN: Kode Lokasi
+          ch_value: 1,
           status: 1,
           sensor_sumber: 1,
-          // Logic Waktu: Prioritaskan waktu sensor
           waktu: { $ifNull: ["$waktu_sensor", "$waktu_fetch_wib"] },
           created_at: 1
         })
@@ -60,7 +60,8 @@ export async function GET(request: Request) {
         .project({
           _id: 0,
           nama_lokasi: 1,
-          tma_value: 1,     // Nilai TMA
+          location_code: 1, // <-- TAMBAHAN: Kode Lokasi
+          tma_value: 1,
           status: 1,
           sensor_sumber: 1,
           waktu: { $ifNull: ["$waktu_sensor", "$waktu_fetch_wib"] },
@@ -74,11 +75,11 @@ export async function GET(request: Request) {
       meta: {
         filter_lokasi: lokasi,
         filter_tanggal: targetDate.toISOString().split('T')[0],
-        count_ch: chData.length,   // Info jumlah data CH
-        count_tma: tmaData.length  // Info jumlah data TMA
+        count_ch: chData.length,
+        count_tma: tmaData.length
       },
       data: {
-        ch: chData,   // Data CH sekarang disertakan
+        ch: chData,
         tma: tmaData
       }
     });
