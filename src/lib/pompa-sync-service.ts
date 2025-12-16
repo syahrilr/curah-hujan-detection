@@ -24,7 +24,7 @@ export async function syncPompaData() {
     // (Logic pengambilan data dari API DSDA)
     const listCH = (Array.isArray(rawCH) ? rawCH : rawCH.data || []).map((item: any) => ({
       nama: item.NAMA_POS || item.nama_pos || item.STATION_NAME || item.NAMA_LOKASI_PEMANTAUAN || "Pos Curah Hujan Tanpa Nama",
-      val: parseFloat((item.CH_HARI_INI || item.TEBAL_HUJAN || item.ch || '0').toString().replace(',', '.')),
+      val: parseFloat((item.CH_HARI_INI || item.TEBAL_HUJAN || item.KETINGGIAN_TERAKHIR || item.ch || '0').toString().replace(',', '.')),
       latitude: parseFloat(item.LATITUDE || item.lat || 0),
       longitude: parseFloat(item.LONGITUDE || item.long || 0),
       status: item.STATUS || (item.CH > 0 ? 'Hujan' : 'Terang'),
