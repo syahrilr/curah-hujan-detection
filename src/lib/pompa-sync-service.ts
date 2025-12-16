@@ -27,7 +27,7 @@ export async function syncPompaData() {
       val: parseFloat((item.CH_HARI_INI || item.TEBAL_HUJAN || item.KETINGGIAN_TERAKHIR || item.ch || '0').toString().replace(',', '.')),
       latitude: parseFloat(item.LATITUDE || item.lat || 0),
       longitude: parseFloat(item.LONGITUDE || item.long || 0),
-      status: item.STATUS || (item.CH > 0 ? 'Hujan' : 'Terang'),
+      status: item.STATUS || (item.KETINGGIAN_TERAKHIR > 0 ? 'Hujan' : 'Terang'),
       waktu_source: item.TANGGAL_TERAKHIR_HARI_INI || item.TANGGAL_TERAKHIR || item.TANGGAL || null
     }));
 
