@@ -1,23 +1,23 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  CloudRain, Droplets, MapPin, RefreshCw,
+  CloudRain, MapPin, RefreshCw,
   Database, Loader2, DownloadCloud, LayoutGrid,
   LayoutList, TrendingUp, Settings, Play, Square,
   Search, AlertTriangle, Waves, Activity, ArrowRightLeft, Clock,
-  LineChart as LineChartIcon, X, Calendar, Maximize2, ChevronDown
+  LineChart as LineChartIcon, X, Calendar, Maximize2, Droplets, ArrowUpCircle, Info
 } from 'lucide-react';
-import { format, isValid } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
-  ComposedChart, Line, Area, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, ReferenceLine
+  ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 // --- INTERFACES ---
@@ -34,6 +34,7 @@ interface MetricData {
 interface PompaData {
   id: string;
   nama_lokasi: string;
+  location_code?: string;
   lokasi_lat: number;
   lokasi_lng: number;
   ch?: MetricData;
@@ -47,7 +48,7 @@ interface CronStatus {
   schedule: string;
 }
 
-// --- HELPER FUNCTIONS ---
+// --- HELPER STYLES ---
 const getStatusColor = (status: string = '') => {
   const s = status.toLowerCase();
   if (s.includes('siaga 1')) return 'border-red-500 bg-red-50 text-red-700';
@@ -59,9 +60,21 @@ const getStatusColor = (status: string = '') => {
 const getBadgeVariant = (status: string = '') => {
   const s = status.toLowerCase();
   if (s.includes('siaga 1')) return 'destructive';
-  if (s.includes('siaga 2')) return 'default'; // Orange/Amber usually custom
-  if (s.includes('siaga 3')) return 'secondary'; // Yellow
-  return 'outline'; // Normal
+  if (s.includes('siaga 2')) return 'default';
+  if (s.includes('siaga 3')) return 'secondary';
+  return 'outline';
+};
+
+const getCHColor = (v = 0) => v < 0.5 ? 'text-gray-400' : v <= 20 ? 'text-blue-600' : v <= 50 ? 'text-orange-500' : 'text-red-600';
+
+const getRainBadgeStyle = (status: string = '') => {
+  const s = status.toLowerCase();
+  if (s === 'terang') return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+  if (s.includes('ringan')) return 'bg-blue-50 text-blue-600 border-blue-200';
+  if (s.includes('sedang')) return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+  if (s.includes('lebat')) return 'bg-orange-50 text-orange-700 border-orange-200';
+  if (s.includes('ekstrem') || s.includes('sangat')) return 'bg-red-50 text-red-700 border-red-200';
+  return 'bg-slate-100 text-slate-500 border-slate-200';
 };
 
 const fmtDate = (d?: string | null, formatStr = "dd MMM HH:mm") => {
@@ -69,7 +82,7 @@ const fmtDate = (d?: string | null, formatStr = "dd MMM HH:mm") => {
   try { const date = new Date(d); return isValid(date) ? format(date, formatStr, { locale: id }) : d; } catch { return '-'; }
 };
 
-// --- SUB-COMPONENT: HISTORY MODAL (PREMIUM UI) ---
+// --- SUB-COMPONENT: HISTORY MODAL (PREMIUM & DETAILED) ---
 function HistoryModal({ lokasi, onClose }: { lokasi: PompaData, onClose: () => void }) {
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,15 +94,32 @@ function HistoryModal({ lokasi, onClose }: { lokasi: PompaData, onClose: () => v
       try {
         const res = await fetch(`/api/dsda/pompa/history?lokasi=${encodeURIComponent(lokasi.nama_lokasi)}&tanggal=${date}`);
         const json = await res.json();
+
         if (json.success) {
-          // Mapping data dari API History yang baru
-          const mapped = json.data.tma.map((item: any) => ({
-              time: format(new Date(item.waktu), 'HH:mm'), // Jam untuk X-Axis
-              fullDate: item.waktu,
-              tma: item.tma_value,
-              status: item.status,
-              source: item.sensor_sumber
-          }));
+          // Merge Data CH dan TMA berdasarkan waktu
+          // Asumsi: TMA datanya lebih lengkap/sering, jadi kita jadikan base map
+          const tmaList = json.data.tma || [];
+          const chList = json.data.ch || [];
+
+          // Mapping logic
+          const mapped = tmaList.map((tItem: any) => {
+            // Cari data hujan yang waktunya berdekatan (match jam & menit)
+            const tTime = new Date(tItem.waktu).toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+            const matchingCH = chList.find((cItem: any) =>
+               new Date(cItem.waktu).toISOString().slice(0, 16) === tTime
+            );
+
+            return {
+              time: format(new Date(tItem.waktu), 'HH:mm'),
+              fullDate: tItem.waktu,
+              tma: tItem.tma_value,
+              status_tma: tItem.status,
+              ch: matchingCH ? matchingCH.ch_value : 0,
+              status_ch: matchingCH ? matchingCH.status : 'Terang',
+              source_tma: tItem.sensor_sumber
+            };
+          });
+
           setHistoryData(mapped);
         }
       } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -97,119 +127,184 @@ function HistoryModal({ lokasi, onClose }: { lokasi: PompaData, onClose: () => v
     fetchHistory();
   }, [lokasi, date]);
 
-  // Statistik untuk Header Modal
+  // Statistik Ringkas
   const maxTMA = historyData.length > 0 ? Math.max(...historyData.map(d => d.tma)) : 0;
-  const lastStatus = historyData.length > 0 ? historyData[historyData.length - 1].status : '-';
+  const maxCH = historyData.length > 0 ? Math.max(...historyData.map(d => d.ch)) : 0;
+  const lastData = historyData.length > 0 ? historyData[historyData.length - 1] : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <Card className="w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl border-none bg-white overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-md animate-in fade-in duration-300">
+      <Card className="w-full max-w-6xl max-h-[95vh] flex flex-col shadow-2xl border-none bg-white overflow-hidden ring-1 ring-slate-200">
 
-        {/* 1. MODAL HEADER */}
-        <div className="flex flex-row items-center justify-between px-6 py-4 border-b bg-slate-50/50 shrink-0">
+        {/* HEADER */}
+        <div className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white shrink-0">
           <div>
             <div className="flex items-center gap-2 text-blue-600 mb-1">
               <Activity className="h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-wider">Analisis Detail</span>
+              <span className="text-xs font-bold uppercase tracking-wider">Analisis Detail & Riwayat</span>
             </div>
             <CardTitle className="text-xl text-slate-800">{lokasi.nama_lokasi}</CardTitle>
-            <p className="text-xs text-slate-500 font-mono mt-1">{lokasi.lokasi_lat}, {lokasi.lokasi_lng}</p>
+            <p className="text-xs text-slate-500 font-mono mt-0.5">{lokasi.lokasi_lat}, {lokasi.lokasi_lng}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-slate-200"><X className="h-5 w-5 text-slate-500"/></Button>
+          <div className="flex items-center gap-3">
+             <div className="hidden md:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                <Calendar className="h-4 w-4 text-slate-500"/>
+                <input type="date" className="bg-transparent text-sm font-medium outline-none text-slate-700" value={date} onChange={(e) => setDate(e.target.value)} />
+             </div>
+             <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-slate-100 hover:text-red-500 transition-colors"><X className="h-6 w-6"/></Button>
+          </div>
         </div>
 
-        <div className="overflow-y-auto p-6 space-y-6">
+        {/* CONTENT AREA */}
+        <div className="overflow-y-auto p-6 space-y-6 bg-slate-50/50 flex-1">
 
-          {/* 2. CONTROLS & SUMMARY */}
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-end md:items-center">
-            {/* Date Picker */}
-            <div className="flex items-center gap-3 bg-white border p-1 pr-3 rounded-lg shadow-sm">
-              <div className="bg-blue-50 p-2 rounded-md"><Calendar className="h-4 w-4 text-blue-600"/></div>
-              <input type="date" className="text-sm font-medium outline-none text-slate-600" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
-
-            {/* Quick Stats */}
-            {!loading && historyData.length > 0 && (
-              <div className="flex gap-4">
-                <div className="text-right">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">TMA Tertinggi</p>
-                  <p className="text-xl font-bold text-slate-800">{maxTMA} <span className="text-sm font-normal text-slate-400">cm</span></p>
-                </div>
-                <div className="w-px bg-slate-200 h-8 self-center"></div>
-                <div className="text-right">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">Status Terakhir</p>
-                  <Badge variant={getBadgeVariant(lastStatus)}>{lastStatus}</Badge>
-                </div>
-              </div>
-            )}
+          {/* MOBILE DATE PICKER (Visible on small screens only) */}
+          <div className="md:hidden flex items-center gap-3 bg-white p-3 rounded-lg border shadow-sm mb-4">
+             <Calendar className="h-4 w-4 text-slate-500"/>
+             <input type="date" className="w-full bg-transparent text-sm font-medium outline-none text-slate-700" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
 
-          {/* 3. MAIN CHART */}
-          <Card className="border shadow-sm overflow-hidden">
-            <CardContent className="p-0">
-              {loading ? <Skeleton className="h-[350px] w-full" /> : historyData.length > 0 ? (
-                <div className="h-[350px] w-full bg-gradient-to-b from-white to-slate-50/50 pt-6 pr-6">
+          {!loading && historyData.length > 0 ? (
+            <>
+              {/* 1. SUMMARY CARDS */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="shadow-sm border-l-4 border-l-blue-500 bg-white">
+                  <CardContent className="p-4 py-3">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">TMA Terakhir</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-slate-800">{lastData?.tma}</span>
+                      <span className="text-xs text-slate-500">cm</span>
+                    </div>
+                    <Badge variant={getBadgeVariant(lastData?.status_tma)} className="mt-1 h-5 text-[9px] px-1.5">{lastData?.status_tma}</Badge>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm border-l-4 border-l-cyan-500 bg-white">
+                  <CardContent className="p-4 py-3">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Max Hujan</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-cyan-600">{maxCH}</span>
+                      <span className="text-xs text-slate-500">mm</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><CloudRain className="h-3 w-3"/> Puncak Hujan</div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm border-l-4 border-l-indigo-500 bg-white">
+                  <CardContent className="p-4 py-3">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Max TMA</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-indigo-600">{maxTMA}</span>
+                      <span className="text-xs text-slate-500">cm</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><ArrowUpCircle className="h-3 w-3"/> Puncak Air</div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm border-l-4 border-l-slate-400 bg-white">
+                  <CardContent className="p-4 py-3">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Data Points</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-slate-700">{historyData.length}</span>
+                      <span className="text-xs text-slate-500">log</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><Clock className="h-3 w-3"/> Total Record</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 2. DUAL AXIS CHART (CH + TMA) */}
+              <Card className="border shadow-sm bg-white overflow-hidden">
+                <CardHeader className="py-4 border-b bg-slate-50/30">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-slate-500"/> Grafik Gabungan (TMA vs Hujan)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 h-[400px] w-full pt-6 pr-6">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={historyData}>
                       <defs>
-                        <linearGradient id="colorTmaHistory" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <linearGradient id="colorTmaFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="time" tick={{fontSize:10, fill:'#94a3b8'}} minTickGap={30} axisLine={false} tickLine={false} dy={10} />
-                      <YAxis label={{value:'TMA (cm)', angle:-90, position:'insideLeft', fill:'#94a3b8', fontSize:10}} tick={{fontSize:10, fill:'#64748b'}} axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="time" tick={{fontSize:10, fill:'#94a3b8'}} minTickGap={30} />
+
+                      {/* Sumbu Kiri: TMA */}
+                      <YAxis yAxisId="left" label={{value:'TMA (cm)', angle:-90, position:'insideLeft', fontSize:10, fill:'#3b82f6'}} tick={{fontSize:10, fill:'#64748b'}} />
+
+                      {/* Sumbu Kanan: Curah Hujan */}
+                      <YAxis yAxisId="right" orientation="right" label={{value:'Hujan (mm)', angle:90, position:'insideRight', fontSize:10, fill:'#0ea5e9'}} tick={{fontSize:10, fill:'#64748b'}} />
+
                       <Tooltip
                         contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
-                        labelStyle={{color:'#64748b', marginBottom:'4px', fontSize:'12px'}}
-                        itemStyle={{fontWeight:'bold', color:'#1e293b'}}
-                        formatter={(value:any) => [`${value} cm`, 'Tinggi Muka Air']}
-                        labelFormatter={(l) => `Pukul ${l}`}
+                        labelStyle={{color:'#64748b', marginBottom:'4px', fontSize:'12px', fontWeight:'bold'}}
                       />
-                      <Area type="monotone" dataKey="tma" stroke="#3b82f6" strokeWidth={3} fill="url(#colorTmaHistory)" activeDot={{r: 6, strokeWidth: 0}} />
+                      <Legend wrapperStyle={{fontSize:'12px', paddingTop:'10px'}}/>
+
+                      {/* Grafik Bar untuk Hujan (Sumbu Kanan) */}
+                      <Bar yAxisId="right" dataKey="ch" name="Curah Hujan (mm)" fill="#0ea5e9" barSize={10} radius={[2,2,0,0]} />
+
+                      {/* Grafik Area untuk TMA (Sumbu Kiri) */}
+                      <Area yAxisId="left" type="monotone" dataKey="tma" name="TMA (cm)" stroke="#3b82f6" strokeWidth={3} fill="url(#colorTmaFill)" activeDot={{r: 5, strokeWidth: 0}} />
                     </ComposedChart>
                   </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-[350px] flex flex-col items-center justify-center text-slate-400">
-                  <Database className="h-12 w-12 mb-2 opacity-20"/>
-                  <p>Tidak ada data rekaman pada tanggal ini.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* 4. DATA LOG TABLE */}
-          {!loading && historyData.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                <LayoutList className="h-4 w-4 text-slate-400"/> Log Data ({historyData.length})
-              </h4>
-              <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
-                <div className="max-h-[250px] overflow-y-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 text-xs uppercase text-slate-500 font-semibold sticky top-0 z-10 shadow-sm">
-                      <tr>
-                        <th className="px-4 py-3">Waktu</th>
-                        <th className="px-4 py-3 text-center">TMA (cm)</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3 text-right">Sumber Sensor</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {[...historyData].reverse().map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="px-4 py-2 font-mono text-xs text-slate-600">{fmtDate(item.fullDate, "HH:mm:ss")}</td>
-                          <td className="px-4 py-2 text-center font-bold text-slate-800">{item.tma}</td>
-                          <td className="px-4 py-2"><Badge variant={getBadgeVariant(item.status)} className="h-5 text-[10px]">{item.status}</Badge></td>
-                          <td className="px-4 py-2 text-right text-xs text-slate-400 truncate max-w-[200px]">{item.source}</td>
+              {/* 3. DETAILED LOG TABLE */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2 pl-1">
+                  <LayoutList className="h-4 w-4 text-slate-400"/> Rincian Data Log
+                </h4>
+                <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+                  <div className="max-h-[300px] overflow-y-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 text-xs uppercase text-slate-500 font-semibold sticky top-0 z-10 shadow-sm">
+                        <tr>
+                          <th className="px-4 py-3 w-[120px]">Waktu</th>
+                          <th className="px-4 py-3 text-center">TMA (cm)</th>
+                          <th className="px-4 py-3">Status Air</th>
+                          <th className="px-4 py-3 text-center">Hujan (mm)</th>
+                          <th className="px-4 py-3">Status Cuaca</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {[...historyData].reverse().map((item, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-4 py-2 font-mono text-xs text-slate-600 border-r border-slate-50 bg-slate-50/30">
+                              {fmtDate(item.fullDate, "HH:mm")} <span className="text-slate-400 text-[10px]">WIB</span>
+                            </td>
+                            <td className="px-4 py-2 text-center font-bold text-slate-700">{item.tma}</td>
+                            <td className="px-4 py-2">
+                              <Badge variant={getBadgeVariant(item.status_tma)} className="h-5 text-[10px] shadow-none">{item.status_tma}</Badge>
+                            </td>
+                            <td className="px-4 py-2 text-center font-bold text-sky-600">{item.ch}</td>
+                            <td className="px-4 py-2">
+                              <Badge className={`h-5 text-[10px] shadow-none border font-normal ${getRainBadgeStyle(item.status_ch)}`}>{item.status_ch || 'Terang'}</Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
+            </>
+          ) : (
+            // EMPTY STATE (IMPROVED)
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 py-12">
+              <div className="bg-slate-100 p-6 rounded-full">
+                <Database className="h-12 w-12 text-slate-300"/>
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-lg font-semibold text-slate-700">Tidak Ada Data Riwayat</h3>
+                <p className="text-sm text-slate-500 max-w-xs mx-auto">
+                  Belum ada data sensor yang terekam pada tanggal <strong>{format(parseISO(date), "dd MMMM yyyy", { locale: id })}</strong>.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setDate(new Date().toISOString().split('T')[0])}>
+                Kembali ke Hari Ini
+              </Button>
             </div>
           )}
         </div>
@@ -227,9 +322,19 @@ export default function PompaMonitorDashboard() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLokasi, setSelectedLokasi] = useState<PompaData | null>(null);
+  const [locationList, setLocationList] = useState<string[]>([]);
 
-  // ... (Sisa fungsi Fetch, Sync, Chart Data, dll SAMA SEPERTI SEBELUMNYA) ...
-  // ... Paste bagian Logic Fetching & Chart Data dari kode sebelumnya di sini ...
+  // 1. Fetch List Lokasi (Dropdown)
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const res = await fetch('/api/dsda/pompa/list-lokasi');
+        const json = await res.json();
+        if (json.success) setLocationList(json.data);
+      } catch (e) { console.error(e); }
+    };
+    fetchLocations();
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -272,7 +377,10 @@ export default function PompaMonitorDashboard() {
     return { total, alertCount, maxCH, maxTMA };
   }, [data]);
 
-  const filteredData = useMemo(() => data.filter(i => i.nama_lokasi.toLowerCase().includes(searchTerm.toLowerCase())), [data, searchTerm]);
+  const filteredData = useMemo(() => {
+    if (!searchTerm || searchTerm === 'all') return data;
+    return data.filter(item => item.nama_lokasi === searchTerm);
+  }, [data, searchTerm]);
 
   const chartData = useMemo(() => [...data].sort((a, b) => (b.tma?.val || 0) - (a.tma?.val || 0)).map(i => ({
     name: i.nama_lokasi.replace('Rumah Pompa ', '').replace('Pintu Air ', ''),
@@ -282,16 +390,12 @@ export default function PompaMonitorDashboard() {
     statusTMA: i.tma?.status
   })), [data]);
 
-  const getCHColor = (v = 0) => v === 0 ? 'text-gray-400' : v < 5 ? 'text-blue-500' : v < 20 ? 'text-amber-500' : 'text-red-600';
-
   if (loading && !data.length) return <div className="p-8 space-y-4"><Skeleton className="h-10 w-48"/><Skeleton className="h-96 w-full"/></div>;
 
   return (
     <div className="min-h-screen bg-slate-50/50 space-y-6 p-4 md:p-6 lg:p-8 font-sans">
-      {/* RENDER POPUP HISTORY */}
       {selectedLokasi && <HistoryModal lokasi={selectedLokasi} onClose={() => setSelectedLokasi(null)} />}
 
-      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h2 className="text-3xl font-bold flex items-center gap-3 text-slate-800"><Database className="h-6 w-6 text-white bg-blue-600 p-1 rounded" /> Monitoring Rumah Pompa</h2>
@@ -306,15 +410,16 @@ export default function PompaMonitorDashboard() {
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        {/* TABS HEADER */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
            <TabsList className="bg-white border shadow-sm p-1">
               <TabsTrigger value="dashboard"><Activity className="h-4 w-4 mr-2"/> Dashboard</TabsTrigger>
               <TabsTrigger value="control"><Settings className="h-4 w-4 mr-2"/> Control</TabsTrigger>
            </TabsList>
            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-              <input type="text" placeholder="Cari..." className="w-full pl-9 pr-4 py-2 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <select className="w-full pl-3 pr-8 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm appearance-none cursor-pointer text-slate-700" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}>
+                <option value="all">Semua Lokasi ({locationList.length})</option>
+                {locationList.map((loc) => (<option key={loc} value={loc}>{loc}</option>))}
+              </select>
            </div>
         </div>
 
@@ -347,7 +452,6 @@ export default function PompaMonitorDashboard() {
             </Card>
           )}
 
-          {/* VIEW SWITCHER */}
           <div className="flex justify-end gap-1 mb-4">
               <div className="bg-slate-200 p-1 rounded-lg flex">
                 <Button size="sm" variant={viewMode==='grid'?'default':'ghost'} onClick={()=>setViewMode('grid')} className="h-7 text-xs rounded-md shadow-sm"><LayoutGrid className="h-3 w-3 mr-1"/> Grid</Button>
@@ -355,7 +459,6 @@ export default function PompaMonitorDashboard() {
               </div>
           </div>
 
-          {/* VIEW: GRID */}
           {viewMode === 'grid' ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredData.map(p => (
@@ -367,15 +470,25 @@ export default function PompaMonitorDashboard() {
                           </CardHeader>
                           <CardContent className="p-0">
                               <div className="grid grid-cols-2 divide-x divide-slate-50">
+                                  {/* GRID - CH */}
                                   <div className="p-3 text-center flex flex-col justify-center">
                                       <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Hujan</span>
                                       <div className={`text-xl font-bold ${getCHColor(p.ch?.val)}`}>{p.ch?.val ?? 0} <span className="text-[10px] text-slate-400 font-normal">mm</span></div>
-                                      <div className="text-[9px] text-slate-400 mt-1 truncate w-full" title={p.ch?.source}>{p.ch?.source}</div>
+
+                                      {/* BADGE STATUS HUJAN (NEW) */}
+                                      <div className="mt-1">
+                                         <Badge className={`h-4 text-[9px] px-1 shadow-none font-normal border ${getRainBadgeStyle(p.ch?.status)}`}>{p.ch?.status || 'Terang'}</Badge>
+                                      </div>
+
+                                      <div className="text-[9px] text-slate-400 mt-2 truncate w-full" title={p.ch?.source}>{p.ch?.source}</div>
                                   </div>
+
+                                  {/* GRID - TMA */}
                                   <div className="p-3 text-center flex flex-col justify-center bg-slate-50/30">
                                       <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">TMA</span>
                                       <div className="text-xl font-bold text-slate-800">{p.tma?.val ?? 0} <span className="text-[10px] text-slate-400 font-normal">cm</span></div>
                                       <div className="mt-1"><Badge variant={getBadgeVariant(p.tma?.status)} className="h-4 text-[9px] px-1">{p.tma?.status || 'N/A'}</Badge></div>
+                                      <div className="text-[10px] text-slate-500 mt-2 truncate" title={p.tma?.source}>{p.tma?.source}</div>
                                   </div>
                               </div>
                               <div className="bg-slate-50 px-3 py-2 border-t border-slate-100 flex justify-between items-center text-[10px]">
@@ -387,7 +500,7 @@ export default function PompaMonitorDashboard() {
                   ))}
               </div>
           ) : (
-            /* VIEW: TABLE */
+            // VIEW: TABLE
             <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -406,9 +519,23 @@ export default function PompaMonitorDashboard() {
                           {filteredData.map(p => (
                               <tr key={p.id} className="hover:bg-slate-50/80 transition-colors group">
                                   <td className="p-4"><div className="font-semibold text-slate-700">{p.nama_lokasi}</div><div className="text-xs text-slate-400 font-mono mt-0.5">{p.lokasi_lat.toFixed(4)}, {p.lokasi_lng.toFixed(4)}</div></td>
-                                  <td className="p-4 text-center"><div className={`font-bold text-base ${getCHColor(p.ch?.val)}`}>{p.ch?.val ?? 0}</div></td>
+
+                                  {/* TABLE - CH */}
+                                  <td className="p-4 text-center">
+                                    <div className={`font-bold text-base ${getCHColor(p.ch?.val)}`}>{p.ch?.val ?? 0}</div>
+                                    <div className="mt-1">
+                                      <Badge className={`h-4 text-[9px] px-1 shadow-none font-normal border ${getRainBadgeStyle(p.ch?.status)}`}>{p.ch?.status || 'Terang'}</Badge>
+                                    </div>
+                                  </td>
+
                                   <td className="p-4 text-xs text-slate-500"><div title={p.ch?.source} className="font-medium text-slate-700 truncate max-w-[150px]">{p.ch?.source}</div><div className="text-[10px] flex items-center gap-1 mt-0.5"><ArrowRightLeft className="h-3 w-3 text-slate-400" /> {p.ch?.distance} km</div></td>
-                                  <td className="p-4 text-center"><div className="font-bold text-base text-slate-700">{p.tma?.val ?? 0}</div><div className="mt-1"><Badge variant={getBadgeVariant(p.tma?.status)} className="text-[10px] h-5">{p.tma?.status || 'Normal'}</Badge></div></td>
+
+                                  {/* TABLE - TMA */}
+                                  <td className="p-4 text-center">
+                                    <div className="font-bold text-base text-slate-700">{p.tma?.val ?? 0}</div>
+                                    <div className="mt-1"><Badge variant={getBadgeVariant(p.tma?.status)} className="text-[10px] h-5">{p.tma?.status || 'Normal'}</Badge></div>
+                                  </td>
+
                                   <td className="p-4 text-xs text-slate-500"><div title={p.tma?.source} className="font-medium text-slate-700 truncate max-w-[150px]">{p.tma?.source}</div><div className="text-[10px] flex items-center gap-1 mt-0.5"><ArrowRightLeft className="h-3 w-3 text-slate-400" /> {p.tma?.distance} km</div></td>
                                   <td className="p-4 text-right text-xs text-slate-500 font-mono align-top"><div className="flex flex-col items-end gap-1"><div className="font-bold text-slate-700 text-sm">{fmtDate(p.tma?.sensor_time || p.tma?.updated_at_str, "dd MMM HH:mm")}</div><div className="text-[10px] text-slate-400 flex items-center gap-1 bg-slate-50 px-1.5 py-0.5 rounded"><RefreshCw className="h-3 w-3"/> Sync: {fmtDate(p.ch?.updated_at, "HH:mm")}</div></div></td>
                                   <td className="p-4 text-center"><Button size="sm" variant="ghost" onClick={() => setSelectedLokasi(p)} className="text-slate-400 hover:text-blue-600 hover:bg-blue-50"><LineChartIcon className="h-4 w-4"/></Button></td>
@@ -420,11 +547,8 @@ export default function PompaMonitorDashboard() {
             </div>
           )}
         </TabsContent>
-
-        <TabsContent value="control" className="mt-6">
-            {/* CRON JOB UI (Tetap sama) */}
-            <Card className="shadow-sm border-none bg-white"><CardHeader><CardTitle>Cron Job Manager</CardTitle></CardHeader><CardContent><div className="rounded-xl border overflow-hidden"><table className="w-full text-sm text-left"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-4">Name</th><th className="p-4">Schedule</th><th className="p-4">Status</th><th className="p-4">Last Run</th><th className="p-4 text-right">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{cronList.map(job => (<tr key={job.name} className="bg-white"><td className="p-4 font-bold text-slate-700">{job.name}</td><td className="p-4 font-mono text-slate-500 bg-slate-50/50">{job.schedule}</td><td className="p-4"><Badge variant={job.status==='running'?'default':'secondary'}>{job.status}</Badge></td><td className="p-4 text-slate-500">{fmtDate(job.lastRun)}</td><td className="p-4 text-right"><Button size="sm" variant={job.status==='running'?'destructive':'default'} onClick={()=>handleCron(job.name, job.status==='running'?'stop':'start')} className="h-8 w-8 p-0 rounded-full shadow-sm">{job.status==='running'?<Square className="h-3 w-3 fill-current"/>:<Play className="h-3 w-3 fill-current"/>}</Button></td></tr>))}</tbody></table></div></CardContent></Card>
-        </TabsContent>
+        {/* ... (TAB CONTROL TETAP SAMA) ... */}
+        <TabsContent value="control" className="mt-6"><Card className="shadow-sm border-none bg-white"><CardHeader><CardTitle>Cron Job Manager</CardTitle></CardHeader><CardContent><div className="rounded-xl border overflow-hidden"><table className="w-full text-sm text-left"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-4">Name</th><th className="p-4">Schedule</th><th className="p-4">Status</th><th className="p-4">Last Run</th><th className="p-4 text-right">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{cronList.map(job => (<tr key={job.name} className="bg-white"><td className="p-4 font-bold text-slate-700">{job.name}</td><td className="p-4 font-mono text-slate-500 bg-slate-50/50">{job.schedule}</td><td className="p-4"><Badge variant={job.status==='running'?'default':'secondary'}>{job.status}</Badge></td><td className="p-4 text-slate-500">{fmtDate(job.lastRun)}</td><td className="p-4 text-right"><Button size="sm" variant={job.status==='running'?'destructive':'default'} onClick={()=>handleCron(job.name, job.status==='running'?'stop':'start')} className="h-8 w-8 p-0 rounded-full shadow-sm">{job.status==='running'?<Square className="h-3 w-3 fill-current"/>:<Play className="h-3 w-3 fill-current"/>}</Button></td></tr>))}</tbody></table></div></CardContent></Card></TabsContent>
       </Tabs>
     </div>
   );

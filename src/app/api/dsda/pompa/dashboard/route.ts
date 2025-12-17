@@ -8,7 +8,7 @@ export async function GET() {
     const client = await clientPromise;
     const db = client.db('jakarta_flood_monitoring');
 
-    // Gunakan AGGREGATION untuk mengambil hanya data TERBARU per lokasi
+    // Ambil data terbaru per lokasi (Aggregation)
     const pipelineLatest = [
       { $sort: { created_at: -1 } },
       {
@@ -32,16 +32,15 @@ export async function GET() {
       combinedMap.set(item.nama_lokasi, {
         id: item.location_id || item.id,
         nama_lokasi: item.nama_lokasi,
+        location_code: item.location_code,
         lokasi_lat: item.lokasi_lat,
         lokasi_lng: item.lokasi_lng,
         ch: {
           val: item.ch_value,
-          status: item.status,
-          // Fallback jika data lama masih null
+          status: item.status, // <--- PENTING: Status Hujan (Terang/Hujan Ringan/dll)
           source: item.sensor_sumber || "Sensor Tidak Terdeteksi",
           distance: item.jarak_sensor_km,
           updated_at: item.created_at,
-          // Kirim format WIB juga jika ada
           updated_at_str: item.waktu_fetch_wib || null
         }
       });
@@ -52,6 +51,7 @@ export async function GET() {
       const existing = combinedMap.get(item.nama_lokasi) || {
         id: item.location_id || item.id,
         nama_lokasi: item.nama_lokasi,
+        location_code: item.location_code,
         lokasi_lat: item.lokasi_lat,
         lokasi_lng: item.lokasi_lng
       };
@@ -60,11 +60,12 @@ export async function GET() {
         ...existing,
         tma: {
           val: item.tma_value,
-          status: item.status,
+          status: item.status, // Status TMA (Siaga 1-4)
           source: item.sensor_sumber || "Sensor Tidak Terdeteksi",
           distance: item.jarak_sensor_km,
           updated_at: item.created_at,
-          updated_at_str: item.waktu_fetch_wib || null
+          updated_at_str: item.waktu_fetch_wib || null,
+          sensor_time: item.waktu_sensor || null
         }
       });
     });
