@@ -47,11 +47,23 @@ function dBZtoRainRate(dbz: number): number {
 }
 
 function getRainIntensity(mmPerHour: number): string {
-  if (mmPerHour < 0.5) return "No Rain"
-  if (mmPerHour < 2) return "Light Rain"
-  if (mmPerHour < 10) return "Moderate Rain"
-  if (mmPerHour < 50) return "Heavy Rain"
-  return "Very Heavy Rain"
+  // 0.1 mm biasanya dianggap batas minimal terukur (trace)
+  if (mmPerHour < 0.1) return "Berawan / Cerah";
+
+  // 0.1 - 1.0 biasanya gerimis (drizzle)
+  if (mmPerHour < 1) return "Gerimis";
+
+  // BMKG: 1 - 5 mm/jam
+  if (mmPerHour < 5) return "Hujan Ringan";
+
+  // BMKG: 5 - 10 mm/jam
+  if (mmPerHour < 10) return "Hujan Sedang";
+
+  // BMKG: 10 - 20 mm/jam
+  if (mmPerHour < 20) return "Hujan Lebat";
+
+  // BMKG: > 20 mm/jam
+  return "Hujan Sangat Lebat / Badai";
 }
 
 function latLngToImageXY(

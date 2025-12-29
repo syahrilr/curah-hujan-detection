@@ -20,27 +20,53 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const lokasi = searchParams.get('lokasi');
     const tanggal = searchParams.get('tanggal');
+    const lastHoursParam = searchParams.get('last_hours'); // Parameter baru
 
+    // Validasi Lokasi
     if (!lokasi) {
-      // Return Error juga harus ada header CORS agar frontend bisa baca errornya
       return NextResponse.json(
         { success: false, message: 'Lokasi wajib diisi' },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    const targetDate = tanggal ? new Date(tanggal) : new Date();
-    const startOfDay = new Date(targetDate); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate); endOfDay.setHours(23, 59, 59, 999);
+    // --- LOGIKA PENENTUAN WAKTU (FILTER) ---
+    let queryStartDate: Date;
+    let queryEndDate: Date;
+    let filterMode: string;
 
+    if (lastHoursParam) {
+      // MODE A: Filter X Jam Terakhir
+      const hours = parseInt(lastHoursParam);
+      const now = new Date();
+
+      queryEndDate = now; // Sampai detik ini
+      queryStartDate = new Date(now.getTime() - (hours * 60 * 60 * 1000)); // Mundur X jam
+      filterMode = `Last ${hours} hours`;
+
+    } else {
+      // MODE B: Filter Harian (Default)
+      const targetDate = tanggal ? new Date(tanggal) : new Date();
+
+      queryStartDate = new Date(targetDate);
+      queryStartDate.setHours(0, 0, 0, 0); // 00:00:00
+
+      queryEndDate = new Date(targetDate);
+      queryEndDate.setHours(23, 59, 59, 999); // 23:59:59
+      filterMode = `Daily: ${queryStartDate.toISOString().split('T')[0]}`;
+    }
+
+    // --- KONEKSI DB ---
     const client = await clientPromise;
     const db = client.db('jakarta_flood_monitoring');
 
+    // Query Database
     const query = {
       nama_lokasi: { $regex: lokasi, $options: 'i' },
-      created_at: { $gte: startOfDay, $lte: endOfDay }
+      created_at: { $gte: queryStartDate, $lte: queryEndDate }
     };
 
+    // --- AMBIL DATA PARALEL ---
     const [chData, tmaData] = await Promise.all([
       db.collection('db_ch_pompa_mapped')
         .find(query)
@@ -73,13 +99,15 @@ export async function GET(request: Request) {
         .toArray()
     ]);
 
-    // --- 3. RETURN RESPONSE DENGAN HEADER CORS ---
+    // --- 3. RETURN RESPONSE ---
     return NextResponse.json(
       {
         success: true,
         meta: {
           filter_lokasi: lokasi,
-          filter_tanggal: targetDate.toISOString().split('T')[0],
+          filter_mode: filterMode,
+          time_start: queryStartDate, // Info range waktu start
+          time_end: queryEndDate,     // Info range waktu end
           count_ch: chData.length,
           count_tma: tmaData.length
         },
@@ -90,14 +118,14 @@ export async function GET(request: Request) {
       },
       {
         status: 200,
-        headers: corsHeaders // Sisipkan header di sini
+        headers: corsHeaders
       }
     );
 
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
-      { status: 500, headers: corsHeaders } // Error juga perlu header CORS
+      { status: 500, headers: corsHeaders }
     );
   }
 }
