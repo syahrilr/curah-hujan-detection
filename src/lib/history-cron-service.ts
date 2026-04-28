@@ -14,19 +14,7 @@ let lastRunStats: any = null;
 let errorCount = 0;
 let successCount = 0;
 
-// MongoDB Client
-let client: MongoClient | null = null;
-if (MONGODB_ENABLED) {
-  client = new MongoClient(MONGODB_URI, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-    },
-    connectTimeoutMS: 10000,
-    serverSelectionTimeoutMS: 10000,
-  });
-}
+// Note: MongoDB connections are now managed per-batch in fetchAndSaveAllLocationsHistory
 
 /**
  * Fungsi untuk menyimpan data ke MongoDB dengan collection terpisah per lokasi
@@ -36,6 +24,7 @@ if (MONGODB_ENABLED) {
  * FIXED VERSION - Mengatasi conflict createdAt
  */
 async function saveToMongoDB(
+  db: import("mongodb").Db | null,
   locationName: string,
   latitude: number,
   longitude: number,
@@ -43,15 +32,12 @@ async function saveToMongoDB(
   endDate: string,
   historyData: any
 ) {
-  if (!MONGODB_ENABLED || !client) {
+  if (!db) {
     console.log("   ⚠️ MongoDB disabled - data tidak disimpan");
     return { saved: false, documentsCount: 0 };
   }
 
   try {
-    await client.connect();
-    const db = client.db(DB_NAME);
-
     // Buat nama collection dari nama lokasi (sanitize)
     const collectionName = locationName
       .toLowerCase()
@@ -173,12 +159,6 @@ async function saveToMongoDB(
       documentsCount: 0,
       error: (dbError as Error).message,
     };
-  } finally {
-    try {
-      await client.close();
-    } catch (closeError) {
-      console.warn("   ⚠️ Error closing MongoDB connection:", closeError);
-    }
   }
 }
 
@@ -190,6 +170,9 @@ async function fetchAndSaveAllLocationsHistory(daysBack: number = 7) {
   console.log(`\n📊 Starting history fetch for all locations...`);
   console.log(`   Days back: ${daysBack}`);
 
+  let mongoClient: MongoClient | null = null;
+  let db: import("mongodb").Db | null = null;
+
   try {
     const locations = await getPumpLocations();
     console.log(`   Total locations: ${locations.length}`);
@@ -199,6 +182,31 @@ async function fetchAndSaveAllLocationsHistory(daysBack: number = 7) {
     const startDate = format(subDays(new Date(), daysBack), "yyyy-MM-dd");
 
     console.log(`   Date range: ${startDate} to ${endDate}\n`);
+
+    // ✅ Connect to MongoDB ONCE for all locations
+    if (MONGODB_ENABLED && MONGODB_URI) {
+      try {
+        console.log(`   🔌 [DB] Connecting to MongoDB...`);
+        mongoClient = new MongoClient(MONGODB_URI, {
+          serverApi: {
+            version: ServerApiVersion.v1,
+            strict: false,
+            deprecationErrors: true,
+          },
+          connectTimeoutMS: 10000,
+          serverSelectionTimeoutMS: 10000,
+        });
+        await mongoClient.connect();
+        db = mongoClient.db(DB_NAME);
+        console.log(`   [DB] MongoDB connected to database: ${DB_NAME}\n`);
+      } catch (dbError) {
+        console.error("   ❌ [DB] MongoDB connection failed:", dbError);
+        console.warn("   [DB] Will continue without saving to database");
+        db = null;
+      }
+    } else {
+      console.warn("   [DB] MONGODB_URI not found. Data will not be saved.");
+    }
 
     for (let i = 0; i < locations.length; i++) {
       const location = locations[i];
@@ -217,9 +225,10 @@ async function fetchAndSaveAllLocationsHistory(daysBack: number = 7) {
         const dataPoints = historyData.hourly.time.length;
         console.log(`   ✓ Received ${dataPoints} data points`);
 
-        // Simpan ke MongoDB
+        // Simpan ke MongoDB (menggunakan koneksi yang sudah ada)
         console.log(`   💾 Saving to MongoDB...`);
         const saveResult = await saveToMongoDB(
+          db,
           location.name,
           location.lat,
           location.lng,
@@ -269,6 +278,16 @@ async function fetchAndSaveAllLocationsHistory(daysBack: number = 7) {
   } catch (error) {
     console.error("❌ Fatal error in fetchAndSaveAllLocationsHistory:", error);
     throw error;
+  } finally {
+    // ✅ Close connection ONCE at the end
+    if (mongoClient) {
+      try {
+        await mongoClient.close();
+        console.log("\n   🔌 [DB] MongoDB connection closed.");
+      } catch (closeError) {
+        console.warn("   ⚠️ [DB] Error closing MongoDB connection:", closeError);
+      }
+    }
   }
 }
 

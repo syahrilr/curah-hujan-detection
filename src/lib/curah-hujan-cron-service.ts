@@ -41,7 +41,7 @@ async function fetchAndSaveRainfallData() {
     }
 
     client = new MongoClient(MONGODB_URI, {
-      serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true },
+      serverApi: { version: ServerApiVersion.v1, strict: false, deprecationErrors: true },
     });
     await client.connect();
     const db = client.db(DB_NAME);

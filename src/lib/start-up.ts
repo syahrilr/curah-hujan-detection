@@ -26,7 +26,18 @@ export function initializeServerStartup() {
   console.log("─".repeat(60));
   if (typeof initializeForecastCronJob === 'function') initializeForecastCronJob();
 
-  console.log("\n🏗️ 3. Pompa Data Sync (Nearest Neighbor) Cron Job:");
+  // 3. Initialize TMA Cron (Water Level Monitoring)
+  console.log("\n🌊 3. TMA (Water Level) Monitoring Cron Job:");
+  console.log("─".repeat(60));
+  if (typeof initializeTMACronJob === 'function') initializeTMACronJob();
+
+  // 4. Initialize Rainfall/Curah Hujan Cron (DSDA Rainfall Monitoring)
+  console.log("\n🌧️ 4. Curah Hujan (DSDA Rainfall) Monitoring Cron Job:");
+  console.log("─".repeat(60));
+  if (typeof initializeRainfallCronJob === 'function') initializeRainfallCronJob();
+
+  // 5. Initialize Pompa Sync Cron (Nearest Neighbor Mapping)
+  console.log("\n🏗️ 5. Pompa Data Sync (Nearest Neighbor) Cron Job:");
   console.log("─".repeat(60));
   initializePompaSyncCronJob()
 

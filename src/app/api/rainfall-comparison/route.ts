@@ -21,7 +21,7 @@ function getClient(): Promise<MongoClient> {
       client = new MongoClient(MONGODB_URI, {
         serverApi: {
           version: ServerApiVersion.v1,
-          strict: true,
+          strict: false,
           deprecationErrors: true,
         },
       })
@@ -34,7 +34,7 @@ function getClient(): Promise<MongoClient> {
       client = new MongoClient(MONGODB_URI, {
         serverApi: {
           version: ServerApiVersion.v1,
-          strict: true,
+          strict: false,
           deprecationErrors: true,
         },
       })

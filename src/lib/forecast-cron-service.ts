@@ -228,7 +228,7 @@ async function fetchAndSaveAllForecastsData() {
         client = new MongoClient(MONGODB_URI, {
           serverApi: {
             version: ServerApiVersion.v1,
-            strict: true,
+            strict: false,
             deprecationErrors: true,
           },
           connectTimeoutMS: 10000,

@@ -393,15 +393,12 @@ export async function checkRainfallAtPumpsWithCapture(rainfallThreshold = 2.0): 
         if (canvasAvailable) {
           rainfall = await readRainfallFromImage(latestImageUrl, location.lat, location.lng, bounds, radarData.legends)
         } else {
-          const randomDbz = Math.floor(Math.random() * 30)
-          const rainRate = dBZtoRainRate(randomDbz)
-          const intensity = getRainIntensity(rainRate)
-
+          // Canvas unavailable — return zero values instead of random data
           rainfall = {
-            dbz: randomDbz,
-            rainRate: rainRate,
-            intensity: intensity,
-            confidence: "Estimated (Canvas N/A)",
+            dbz: 0,
+            rainRate: 0,
+            intensity: "Unknown (Canvas N/A)",
+            confidence: "No Data (Canvas N/A)",
             pixelX: 0,
             pixelY: 0,
           }
@@ -602,7 +599,7 @@ export async function saveRainfallWithImage(
     const insertResult = await collection.insertOne(document)
 
     console.log(`💾 Saved record with ${capturedData?.detectedLocations.length || 0} detected locations`)
-    console.log(`   Radar image: ${(capturedData?.imageBase64.length || 0 / 1024).toFixed(2)} KB`)
+    console.log(`   Radar image: ${((capturedData?.imageBase64.length || 0) / 1024).toFixed(2)} KB`)
     console.log(`   Screenshot: ${annotatedScreenshot.length > 0 ? (annotatedScreenshot.length / 1024).toFixed(2) + ' KB' : 'Not generated'}`)
     console.log(`   Record ID: ${insertResult.insertedId}`)
 

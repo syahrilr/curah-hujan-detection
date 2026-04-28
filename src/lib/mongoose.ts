@@ -4,10 +4,6 @@ const MONGODB_URI =
   process.env.MONGODB_URI ||
   'mongodb://sda:PasukanBiruJatiBaru2024@192.168.5.192:27017/?authSource=admin&directConnection=true';
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
-
 let cached = (global as any).mongoose;
 
 if (!cached) {

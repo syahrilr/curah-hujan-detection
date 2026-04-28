@@ -1,6 +1,4 @@
-import { startRainfallCronJob
-
- } from "./curah-hujan-cron-service";
+import { startRainfallCronJob } from "./curah-hujan-cron-service";
 export function initializeRainfallCronJob() {
   const enableAutoStart = process.env.RAINFALL_CRON_AUTO_START !== "false";
 
