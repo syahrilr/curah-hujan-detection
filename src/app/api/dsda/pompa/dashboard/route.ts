@@ -21,8 +21,8 @@ export async function GET() {
     ];
 
     const [chData, tmaData] = await Promise.all([
-      db.collection('db_ch_pompa_mapped').aggregate(pipelineLatest).toArray(),
-      db.collection('db_tma_pompa_mapped').aggregate(pipelineLatest).toArray()
+      db.collection('db_ch_pompa_mapped').aggregate(pipelineLatest, { allowDiskUse: true }).toArray(),
+      db.collection('db_tma_pompa_mapped').aggregate(pipelineLatest, { allowDiskUse: true }).toArray()
     ]);
 
     const combinedMap = new Map();

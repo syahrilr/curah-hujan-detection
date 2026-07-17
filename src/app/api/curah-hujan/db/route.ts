@@ -20,7 +20,7 @@ export async function GET() {
       },
       { $replaceRoot: { newRoot: "$doc" } },
       { $sort: { ch: -1 } }
-    ]).toArray();
+    ], { allowDiskUse: true }).toArray();
 
     const lastUpdate = data.length > 0 ? data[0].created_at : null;
 
