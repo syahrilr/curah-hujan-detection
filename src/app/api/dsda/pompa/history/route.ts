@@ -127,7 +127,8 @@ export async function GET(request: Request) {
       {
         success: true,
         meta: {
-          filter_lokasi: lokasi,
+          filter_lokasi: rawLocationParam,
+          filter_code: cleanCode,
           filter_mode: filterMode,
           time_start: queryStartDate, // Info range waktu start
           time_end: queryEndDate,     // Info range waktu end
