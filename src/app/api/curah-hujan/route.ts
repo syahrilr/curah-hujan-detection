@@ -105,8 +105,17 @@ export async function GET() {
 
     // 4. Return Data
     const allData = await collection
-      .find({})
-      .sort({ ch: -1 }) // Urutkan curah hujan tertinggi
+      .aggregate([
+        { $sort: { updated_at: -1 } },
+        {
+          $group: {
+            _id: "$nama_pos",
+            doc: { $first: "$$ROOT" }
+          }
+        },
+        { $replaceRoot: { newRoot: "$doc" } },
+        { $sort: { ch: -1 } }
+      ], { allowDiskUse: true })
       .toArray();
 
     return NextResponse.json({

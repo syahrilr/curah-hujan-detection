@@ -84,5 +84,21 @@ export function getHardcodedPumpLocations(): PumpLocation[] {
     { name: "Rumah Pompa Mangga 2", lat: -6.1352159, lng: 106.831607 },
     { name: "Rumah Pompa Kali Asin", lat: -6.1113889, lng: 106.7727778 },
     { name: "Rumah Pompa Muara Angke", lat: -6.1075, lng: 106.7683333 },
+
+    // --- Lokasi Baru Survei SCADA 2026 ---
+    { name: "Rumah Pompa Don Bosco", lat: -6.1665278, lng: 106.9135556, description: "Inlet: Sal. Phb Tarian Raya Don Bosco | Outlet: Sal. Phb Kelapa Lilin Timur" },
+    { name: "Rumah Pompa Tanjungan", lat: -6.1068681, lng: 106.7260123, description: "Inlet: Kali Tanjungan | Outlet: Laut" },
+    { name: "Rumah Pompa Sunter Utara (Gedung Lama)", lat: -6.1206249, lng: 106.8662134, description: "Inlet: Waduk Sunter Utara, Sal. Phb Pela-Pea, Mikro | Outlet: Laut Martadinata" },
+    { name: "Rumah Pompa Kapuk 3", lat: -6.1297115, lng: 106.7755765, description: "Inlet: Sal. PHb Kapuk III | Outlet: Kali Angke" },
+    { name: "Rumah Pompa Kebon Baru (RW 1)", lat: -6.2254628, lng: 106.8634988, description: "Inlet: Sal. Phb Gandeng Asem Baris | Outlet: Kali Ciliwung" },
+    { name: "Rumah Pompa Kebon Baru (PLN)", lat: -6.2265117, lng: 106.8641842, description: "Inlet: Sal. Jl. Kp. Melayu Besar II | Outlet: Kali Ciliwung" },
+    { name: "Rumah Pompa Kebon Baru (RW 2)", lat: -6.2285441, lng: 106.8645421, description: "Inlet: Sal. Jl. Kp. Melayu Besar II | Outlet: Kali Ciliwung" },
+    { name: "Rumah Pompa Kebon Baru (Jalan D)", lat: -6.231778, lng: 106.8638272, description: "Inlet: Sal. Jl. Kb. Baru Tim. I-III | Outlet: Kali Ciliwung" },
+    { name: "Rumah Pompa Kebon Baru (Jalan H)", lat: -6.2342923, lng: 106.8660077, description: "Inlet: Sal. Jl. H | Outlet: Kali Ciliwung" },
+    { name: "Rumah Pompa Kebon Baru (Jalan J)", lat: -6.2348697, lng: 106.8648386, description: "Inlet: Sal. Jl. J | Outlet: Kali Ciliwung" },
+    { name: "Rumah Pompa Tomang Barat", lat: -6.167022, lng: 106.7799677, description: "Inlet: Waduk Tomang Barat | Outlet: Kali Sekretaris" },
+    { name: "Rumah Pompa PHB Bojong", lat: -6.1551785, lng: 106.7382317, description: "Inlet: Waduk Bojong, Sal. Phb PT Pesari | Outlet: Kali Mookervart" },
+    { name: "Rumah Pompa Cawang Wika", lat: -6.2406931, lng: 106.8781794, description: "Inlet: Sal. Jl. DI Panjaitan | Outlet: Kali Cipinang" },
+    { name: "Rumah Pompa Asmi", lat: -6.1705763, lng: 106.8872336, description: "Inlet: Sal. Jl. Printis Kemerdekaan | Outlet: Kali Sunter" },
   ]
 }

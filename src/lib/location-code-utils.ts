@@ -29,7 +29,21 @@ export const validLocationCodes = [
   "tamanbmw",
   "dewaruci",
   "arthagading",
-  "pulomas"
+  "pulomas",
+  "donbosco",
+  "tanjungan",
+  "sunterutara",
+  "kapuk3",
+  "kebonbarurw1",
+  "kebonbarupln",
+  "kebonbarurw2",
+  "kebonbarujaland",
+  "kebonbarujalanh",
+  "kebonbarujalanj",
+  "tomangbarat",
+  "phbbojong",
+  "cawangwika",
+  "asmi"
 ];
 
 export function getLocationCode(dbName: string): string | null {
