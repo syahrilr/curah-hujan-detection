@@ -18,19 +18,27 @@ export async function OPTIONS() {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const lokasi = searchParams.get('lokasi');
+    // Standard parameter: location_code (tanpa spasi). Tetap mendukung alias 'lokasi' dan 'code' untuk backward compatibility.
+    const rawLocationParam = searchParams.get('location_code') || searchParams.get('locationCode') || searchParams.get('lokasi') || searchParams.get('code');
     const tanggal = searchParams.get('tanggal');
     const lastHoursParam = searchParams.get('last_hours');
     const startDateParam = searchParams.get('start_date') || searchParams.get('startDate');
     const endDateParam = searchParams.get('end_date') || searchParams.get('endDate');
 
-    // Validasi Lokasi
-    if (!lokasi) {
+    // Validasi Parameter Lokasi
+    if (!rawLocationParam) {
       return NextResponse.json(
-        { success: false, message: 'Lokasi wajib diisi' },
+        { 
+          success: false, 
+          message: "Parameter 'location_code' wajib diisi. Contoh: ?location_code=donbosco atau ?location_code=kebonbarurw1" 
+        },
         { status: 400, headers: corsHeaders }
       );
     }
+
+    // Normalisasi slug bersih tanpa spasi & huruf kecil
+    const cleanSearch = rawLocationParam.trim();
+    const cleanCode = cleanSearch.toLowerCase().replace(/[\s_-]+/g, '');
 
     // --- LOGIKA PENENTUAN WAKTU (FILTER) ---
     let queryStartDate: Date;
@@ -71,16 +79,12 @@ export async function GET(request: Request) {
     const client = await clientPromise;
     const db = client.db('jakarta_flood_monitoring');
 
-    // Query Database (Mendukung pencarian nama dengan spasi, URL encode, maupun location_code tanpa spasi)
-    const cleanSearch = lokasi.trim();
-    const noSpaceSearch = cleanSearch.replace(/[\s_-]+/g, '');
-
+    // Query Database: Prioritaskan pencocokan location_code bersih (tanpa spasi)
     const query = {
       $or: [
-        { nama_lokasi: { $regex: cleanSearch, $options: 'i' } },
-        { location_code: { $regex: cleanSearch, $options: 'i' } },
-        { location_code: { $regex: noSpaceSearch, $options: 'i' } },
-        { location_id: { $regex: cleanSearch.toLowerCase().replace(/[^a-z0-9]/g, '_'), $options: 'i' } }
+        { location_code: { $regex: cleanCode, $options: 'i' } },
+        { location_id: { $regex: cleanCode, $options: 'i' } },
+        { nama_lokasi: { $regex: cleanSearch, $options: 'i' } }
       ],
       created_at: { $gte: queryStartDate, $lte: queryEndDate }
     };

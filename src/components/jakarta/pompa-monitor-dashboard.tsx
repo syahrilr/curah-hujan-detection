@@ -91,8 +91,8 @@ function HistoryModal({ lokasi, onClose }: { lokasi: PompaData, onClose: () => v
   useEffect(() => {
     const fetchHistory = async () => {
       setLoading(true);
-      try {
-        const res = await fetch(`/api/dsda/pompa/history?lokasi=${encodeURIComponent(lokasi.nama_lokasi)}&tanggal=${date}`);
+        const code = lokasi.location_code || lokasi.nama_lokasi.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const res = await fetch(`/api/dsda/pompa/history?location_code=${encodeURIComponent(code)}&tanggal=${date}`);
         const json = await res.json();
 
         if (json.success) {
