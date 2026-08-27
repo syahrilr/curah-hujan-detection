@@ -20,7 +20,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const lokasi = searchParams.get('lokasi');
     const tanggal = searchParams.get('tanggal');
-    const lastHoursParam = searchParams.get('last_hours'); // Parameter baru
+    const lastHoursParam = searchParams.get('last_hours');
+    const startDateParam = searchParams.get('start_date') || searchParams.get('startDate');
+    const endDateParam = searchParams.get('end_date') || searchParams.get('endDate');
 
     // Validasi Lokasi
     if (!lokasi) {
@@ -44,8 +46,17 @@ export async function GET(request: Request) {
       queryStartDate = new Date(now.getTime() - (hours * 60 * 60 * 1000)); // Mundur X jam
       filterMode = `Last ${hours} hours`;
 
+    } else if (startDateParam && endDateParam) {
+      // MODE B: Filter Rentang Tanggal (Date Range)
+      queryStartDate = new Date(startDateParam);
+      queryEndDate = new Date(endDateParam);
+      if (endDateParam.length === 10) { // Format YYYY-MM-DD
+        queryEndDate.setHours(23, 59, 59, 999);
+      }
+      filterMode = `Range: ${queryStartDate.toISOString().split('T')[0]} to ${queryEndDate.toISOString().split('T')[0]}`;
+
     } else {
-      // MODE B: Filter Harian (Default)
+      // MODE C: Filter Harian (Default jika tanggal diisi atau hari ini)
       const targetDate = tanggal ? new Date(tanggal) : new Date();
 
       queryStartDate = new Date(targetDate);
@@ -60,9 +71,17 @@ export async function GET(request: Request) {
     const client = await clientPromise;
     const db = client.db('jakarta_flood_monitoring');
 
-    // Query Database
+    // Query Database (Mendukung pencarian nama dengan spasi, URL encode, maupun location_code tanpa spasi)
+    const cleanSearch = lokasi.trim();
+    const noSpaceSearch = cleanSearch.replace(/[\s_-]+/g, '');
+
     const query = {
-      nama_lokasi: { $regex: lokasi, $options: 'i' },
+      $or: [
+        { nama_lokasi: { $regex: cleanSearch, $options: 'i' } },
+        { location_code: { $regex: cleanSearch, $options: 'i' } },
+        { location_code: { $regex: noSpaceSearch, $options: 'i' } },
+        { location_id: { $regex: cleanSearch.toLowerCase().replace(/[^a-z0-9]/g, '_'), $options: 'i' } }
+      ],
       created_at: { $gte: queryStartDate, $lte: queryEndDate }
     };
 
