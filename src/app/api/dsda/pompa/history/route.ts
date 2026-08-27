@@ -38,7 +38,9 @@ export async function GET(request: Request) {
 
     // Normalisasi slug bersih tanpa spasi & huruf kecil
     const cleanSearch = rawLocationParam.trim();
-    const cleanCode = cleanSearch.toLowerCase().replace(/[\s_-]+/g, '');
+    const noSpace = cleanSearch.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const strippedCore = noSpace.replace(/^(rumahpompa|pintuair|pos|stasiun|ruanglimpah|waduk|ch|tma)+/g, '') || noSpace;
+    const flexibleRegex = cleanSearch.replace(/[^a-zA-Z0-9]+/g, '[\\s_-]*');
 
     // --- LOGIKA PENENTUAN WAKTU (FILTER) ---
     let queryStartDate: Date;
@@ -79,11 +81,14 @@ export async function GET(request: Request) {
     const client = await clientPromise;
     const db = client.db('jakarta_flood_monitoring');
 
-    // Query Database: Prioritaskan pencocokan location_code bersih (tanpa spasi)
+    // Query Database: Fleksibel mencocokkan location_code (e.g. tomangbarat), location_id (e.g. ch_rumah_pompa_tomang_barat), maupun nama_lokasi
     const query = {
       $or: [
-        { location_code: { $regex: cleanCode, $options: 'i' } },
-        { location_id: { $regex: cleanCode, $options: 'i' } },
+        { location_code: { $regex: strippedCore, $options: 'i' } },
+        { location_id: { $regex: strippedCore, $options: 'i' } },
+        { location_code: { $regex: noSpace, $options: 'i' } },
+        { location_id: { $regex: noSpace, $options: 'i' } },
+        { nama_lokasi: { $regex: flexibleRegex, $options: 'i' } },
         { nama_lokasi: { $regex: cleanSearch, $options: 'i' } }
       ],
       created_at: { $gte: queryStartDate, $lte: queryEndDate }
